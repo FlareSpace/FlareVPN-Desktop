@@ -1,0 +1,229 @@
+.ping-tab {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  color: var(--text-primary);
+  background-color: var(--bg-primary);
+  overflow-y: auto;
+  padding-bottom: 24px;
+}
+
+.ping-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  width: 100%;
+  padding: 24px;
+  background: linear-gradient(180deg, rgba(18, 18, 18, 0.98) 0%, rgba(18, 18, 18, 0.90) 100%);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.ping-header-title {
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.ping-content {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.ping-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ping-section-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-left: 4px;
+}
+
+.ping-type-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ping-type-row {
+  display: flex;
+  gap: 8px;
+}
+
+.ping-type-card {
+  flex: 1;
+  background-color: var(--bg-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.ping-type-card.active {
+  background-color: rgba(59, 130, 246, 0.08);
+  border-color: var(--accent-color, #3B82F6);
+}
+
+.ping-type-card:hover:not(.active) {
+  background-color: var(--bg-tertiary);
+}
+
+.ping-card-icon {
+  color: var(--text-secondary);
+}
+
+.ping-type-card.active .ping-card-icon {
+  color: var(--accent-color, #3B82F6);
+}
+
+.check-icon {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+}
+
+.ping-description {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  line-height: 1.5;
+  margin-left: 4px;
+}
+
+.ping-input {
+  width: 100%;
+  background-color: var(--bg-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 16px;
+  color: var(--text-primary);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.ping-input:focus {
+  border-color: var(--accent-color, #3B82F6);
+}
+
+.ping-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--bg-secondary);
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+  position: relative;
+}
+
+.ping-row-label {
+  font-size: 15px;
+}
+
+.ping-row-value {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--accent-color, #3B82F6);
+  font-size: 15px;
+}
+
+.ping-slider-container {
+  background-color: var(--bg-secondary);
+  border-radius: 12px;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.beautiful-slider {
+  flex: 1;
+  appearance: none;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  outline: none;
+  cursor: pointer;
+  position: relative;
+  background-image: linear-gradient(var(--accent-color, #3B82F6), var(--accent-color, #3B82F6));
+  background-size: var(--slider-value, 0%) 100%;
+  background-repeat: no-repeat;
+}
+
+.beautiful-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid var(--accent-color, #3B82F6);
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+  transition: transform 0.1s ease;
+}
+
+.beautiful-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+}
+
+.beautiful-slider::-webkit-slider-thumb:active {
+  transform: scale(0.9);
+}
+
+.ping-slider-value {
+  font-size: 15px;
+  color: var(--text-secondary);
+  min-width: 60px;
+  text-align: right;
+  font-weight: 500;
+}
+
+.context-menu-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background-color: rgba(30, 30, 30, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 100;
+  min-width: 180px;
+  margin-top: 8px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+}
+
+.context-menu-item {
+  padding: 12px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-size: 14px;
+}
+
+.context-menu-item:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.context-menu-item.active {
+  color: var(--accent-color, #3B82F6);
+}

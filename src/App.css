@@ -1,0 +1,127 @@
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.main-layout {
+  display: flex;
+  flex-direction: row;
+  height: calc(100vh - 32px); 
+  width: 100vw;
+  flex: 1;
+}
+
+.main-view {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  background: radial-gradient(circle at right center, rgba(59, 130, 246, 0.03) 0%, transparent 60%), 
+              var(--bg-primary);
+  position: relative;
+  overflow: hidden;
+}
+
+.tab-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+
+.tab-container.active {
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.tab-container.slide-up {
+  transform: translateY(-100%);
+  pointer-events: none;
+}
+
+.tab-container.slide-down {
+  transform: translateY(100%);
+  pointer-events: none;
+}
+
+.tab-container.hidden-tab {
+  visibility: hidden;
+  transition: none;
+}
+
+.subscriptions-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+.subscriptions-section-header {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 16px 24px 4px 24px;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.subscriptions-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  margin-bottom: 80px; 
+  gap: 12px;
+  overflow-y: auto;
+  transition: margin-bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.subscriptions-panel.has-header {
+  padding-top: 8px;
+}
+
+.subscriptions-panel.expanded-mode {
+  margin-bottom: 0; 
+}
+
+.collapse-all-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: var(--border-radius-lg);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  transition: all var(--transition-fast);
+}
+
+.collapse-all-btn:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-card-hover);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.connection-panel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+

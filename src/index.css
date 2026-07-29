@@ -1,0 +1,114 @@
+:root {
+  --bg-primary: #121212;
+  --bg-secondary: #1E1E1E;
+  --bg-card: #252525;
+  --bg-card-hover: #2C2C2C;
+  --bg-button: #333333;
+  --bg-button-hover: #444444;
+  --text-primary: #FFFFFF;
+  --text-secondary: #A0A0A0;
+  --accent-color: #3B82F6;
+  --accent-hover: #60A5FA;
+  --border-color: #333333;
+  --danger: #EF4444;
+  --success: #10B981;
+  --border-radius-sm: 6px;
+  --border-radius-md: 12px;
+  --border-radius-lg: 24px;
+  
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: "Twemoji Country Flags", 'Inter', 'Roboto', 'Segoe UI', sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  user-select: none;
+  -webkit-user-select: none;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+img, a {
+  -webkit-user-drag: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--bg-button);
+  border-radius: var(--border-radius-sm);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--bg-button-hover);
+}
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+}
+
+.main-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.left-panel {
+  width: 300px;
+  background-color: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.right-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bg-primary);
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: inherit;
+  color: inherit;
+  transition: all var(--transition-fast);
+}
+
+button:active {
+  transform: scale(0.97);
+}
+
+.icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: var(--border-radius-sm);
+  color: var(--text-secondary);
+}
+.icon-btn:hover {
+  background-color: var(--bg-button);
+  color: var(--text-primary);
+}
