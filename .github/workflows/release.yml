@@ -64,7 +64,7 @@ jobs:
         with:
           tagName: v__VERSION__
           releaseName: 'Flare VPN v__VERSION__'
-          releaseBody: '• Auto-releaze'
+          releaseBody: '• Auto-release'
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
