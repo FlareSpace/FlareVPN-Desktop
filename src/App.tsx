@@ -13,6 +13,7 @@ import SubscriptionsTab from './components/SubscriptionsTab';
 import LanguageTab from './components/LanguageTab';
 import BasicSettingsTab from './components/BasicSettingsTab';
 import AdvancedSettingsTab from './components/AdvancedSettingsTab';
+import PersonalizationTab from './components/PersonalizationTab';
 import ModeSelection from './components/ModeSelection';
 import { useTranslation } from 'react-i18next';
 import { useAppStore } from './store/useAppStore';
@@ -31,9 +32,40 @@ function App() {
   const setStatus = useAppStore(state => state.setStatus);
 
 
+  const themeStyle = useAppStore(state => state.themeStyle);
+  const customColorEnabled = useAppStore(state => state.customColorEnabled);
+  const customAccentColor = useAppStore(state => state.customAccentColor);
+
   useAutoUpdater();
 
-  const TAB_ORDER = ['home', 'ping', 'subscriptions', 'language', 'basic', 'advanced'];
+  useEffect(() => {
+    const applyTheme = () => {
+      let resolvedTheme = themeStyle;
+      if (themeStyle === 'auto') {
+        resolvedTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      document.documentElement.setAttribute('data-theme', resolvedTheme);
+
+      if (customColorEnabled && customAccentColor) {
+        document.documentElement.style.setProperty('--accent-color', customAccentColor);
+        document.documentElement.style.setProperty('--accent-hover', customAccentColor);
+      } else {
+        document.documentElement.style.removeProperty('--accent-color');
+        document.documentElement.style.removeProperty('--accent-hover');
+      }
+    };
+
+    applyTheme();
+
+    if (themeStyle === 'auto') {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const handleChange = () => applyTheme();
+      mediaQuery.addEventListener('change', handleChange);
+      return () => mediaQuery.removeEventListener('change', handleChange);
+    }
+  }, [themeStyle, customColorEnabled, customAccentColor]);
+
+  const TAB_ORDER = ['home', 'ping', 'subscriptions', 'personalization', 'language', 'basic', 'advanced'];
 
   const [currentTab, setCurrentTab] = useState(activeTab);
   const [prevTab, setPrevTab] = useState(activeTab);
@@ -157,20 +189,26 @@ function App() {
                 </div>
               )}
               <div className={`subscriptions-panel ${expandedIds.length > 0 ? 'expanded-mode has-header' : ''}`}>
-                {subscriptions.map(sub => (
-                  <SubscriptionCard 
-                    key={sub.id} 
-                    subscription={sub} 
-                    isExpanded={expandedIds.includes(sub.id)}
-                    onToggle={() => {
-                      setExpandedIds(prev => 
-                        prev.includes(sub.id) 
-                          ? prev.filter(id => id !== sub.id)
-                          : [...prev, sub.id]
-                      );
-                    }}
-                  />
-                ))}
+                {subscriptions.length === 0 ? (
+                  <div className="empty-subscriptions">
+                    <span>{t('home.noProfiles')}</span>
+                  </div>
+                ) : (
+                  subscriptions.map(sub => (
+                    <SubscriptionCard 
+                      key={sub.id} 
+                      subscription={sub} 
+                      isExpanded={expandedIds.includes(sub.id)}
+                      onToggle={() => {
+                        setExpandedIds(prev => 
+                          prev.includes(sub.id) 
+                            ? prev.filter(id => id !== sub.id)
+                            : [...prev, sub.id]
+                        );
+                      }}
+                    />
+                  ))
+                )}
               </div>
             </div>
             <div className="connection-panel">
@@ -194,6 +232,10 @@ function App() {
 
           <div className={`tab-container ${getTabClass('subscriptions')}`}>
             <SubscriptionsTab />
+          </div>
+
+          <div className={`tab-container ${getTabClass('personalization')}`}>
+            <PersonalizationTab />
           </div>
 
           <div className={`tab-container ${getTabClass('language')}`}>

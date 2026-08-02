@@ -62,66 +62,68 @@ export default function AdvancedSettingsTab() {
               </label>
             </div>
 
-            {settings.fragmentation_enabled && (
-              <div className="card-expanded-content">
-                <div className="setting-divider"></div>
-                
-                <div className="setting-row">
-                  <span className="setting-label-sub">{t('advancedTab.fallback')}</span>
-                  <div className="custom-dropdown-container">
-                    <button
-                      type="button"
-                      className="dropdown-trigger-btn"
-                      onClick={() => toggleDropdown('fragmentation_fallback')}
-                    >
-                      <span>
-                        {settings.fragmentation_fallback === 'enabled'
-                          ? t('advancedTab.fallbackEnable')
-                          : t('advancedTab.fallbackDisable')}
-                      </span>
-                      <ChevronRight className={`dropdown-arrow ${openDropdown === 'fragmentation_fallback' ? 'open' : ''}`} size={16} />
-                    </button>
+            <div className={`card-collapsible ${settings.fragmentation_enabled ? 'expanded' : ''}`}>
+              <div className="card-collapsible-inner">
+                <div className="card-expanded-content">
+                  <div className="setting-divider"></div>
+                  
+                  <div className="setting-row">
+                    <span className="setting-label-sub">{t('advancedTab.fallback')}</span>
+                    <div className="custom-dropdown-container">
+                      <button
+                        type="button"
+                        className="dropdown-trigger-btn"
+                        onClick={() => toggleDropdown('fragmentation_fallback')}
+                      >
+                        <span>
+                          {settings.fragmentation_fallback === 'enabled'
+                            ? t('advancedTab.fallbackEnable')
+                            : t('advancedTab.fallbackDisable')}
+                        </span>
+                        <ChevronRight className={`dropdown-arrow ${openDropdown === 'fragmentation_fallback' ? 'open' : ''}`} size={16} />
+                      </button>
 
-                    {openDropdown === 'fragmentation_fallback' && (
-                      <div className="context-menu">
-                        <div
-                          className={`context-menu-item ${settings.fragmentation_fallback === 'enabled' ? 'active' : ''}`}
-                          onClick={() => {
-                            updateSetting('fragmentation_fallback', 'enabled');
-                            setOpenDropdown(null);
-                          }}
-                        >
-                          <span>{t('advancedTab.fallbackEnable')}</span>
-                          {settings.fragmentation_fallback === 'enabled' && <Check size={16} />}
+                      {openDropdown === 'fragmentation_fallback' && (
+                        <div className="context-menu">
+                          <div
+                            className={`context-menu-item ${settings.fragmentation_fallback === 'enabled' ? 'active' : ''}`}
+                            onClick={() => {
+                              updateSetting('fragmentation_fallback', 'enabled');
+                              setOpenDropdown(null);
+                            }}
+                          >
+                            <span>{t('advancedTab.fallbackEnable')}</span>
+                            {settings.fragmentation_fallback === 'enabled' && <Check size={16} />}
+                          </div>
+                          <div
+                            className={`context-menu-item ${settings.fragmentation_fallback === 'disabled' ? 'active' : ''}`}
+                            onClick={() => {
+                              updateSetting('fragmentation_fallback', 'disabled');
+                              setOpenDropdown(null);
+                            }}
+                          >
+                            <span>{t('advancedTab.fallbackDisable')}</span>
+                            {settings.fragmentation_fallback === 'disabled' && <Check size={16} />}
+                          </div>
                         </div>
-                        <div
-                          className={`context-menu-item ${settings.fragmentation_fallback === 'disabled' ? 'active' : ''}`}
-                          onClick={() => {
-                            updateSetting('fragmentation_fallback', 'disabled');
-                            setOpenDropdown(null);
-                          }}
-                        >
-                          <span>{t('advancedTab.fallbackDisable')}</span>
-                          {settings.fragmentation_fallback === 'disabled' && <Check size={16} />}
-                        </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="setting-divider"></div>
+
+                  <div className="setting-row">
+                    <span className="setting-label-sub">{t('advancedTab.timeout')}</span>
+                    <input
+                      type="number"
+                      className="number-input-styled"
+                      value={settings.fragmentation_timeout ?? 300}
+                      onChange={(e) => updateSetting('fragmentation_timeout', parseInt(e.target.value) || 0)}
+                    />
                   </div>
                 </div>
-
-                <div className="setting-divider"></div>
-
-                <div className="setting-row">
-                  <span className="setting-label-sub">{t('advancedTab.timeout')}</span>
-                  <input
-                    type="number"
-                    className="number-input-styled"
-                    value={settings.fragmentation_timeout ?? 300}
-                    onChange={(e) => updateSetting('fragmentation_timeout', parseInt(e.target.value) || 0)}
-                  />
-                </div>
               </div>
-            )}
+            </div>
           </div>
           <p className="section-description">{t('advancedTab.fragmentationDesc')}</p>
         </div>
@@ -141,98 +143,100 @@ export default function AdvancedSettingsTab() {
               </label>
             </div>
 
-            {settings.mux_enabled && (
-              <div className="card-expanded-content">
-                <div className="setting-divider"></div>
+            <div className={`card-collapsible ${settings.mux_enabled ? 'expanded' : ''}`}>
+              <div className="card-collapsible-inner">
+                <div className="card-expanded-content">
+                  <div className="setting-divider"></div>
 
-                <div className="setting-row">
-                  <span className="setting-label-sub">{t('advancedTab.method')}</span>
-                  <div className="custom-dropdown-container">
-                    <button
-                      type="button"
-                      className="dropdown-trigger-btn"
-                      onClick={() => toggleDropdown('mux_protocol')}
-                    >
-                      <span>{settings.mux_protocol || 'h2mux'}</span>
-                      <ChevronRight className={`dropdown-arrow ${openDropdown === 'mux_protocol' ? 'open' : ''}`} size={16} />
-                    </button>
+                  <div className="setting-row">
+                    <span className="setting-label-sub">{t('advancedTab.method')}</span>
+                    <div className="custom-dropdown-container">
+                      <button
+                        type="button"
+                        className="dropdown-trigger-btn"
+                        onClick={() => toggleDropdown('mux_protocol')}
+                      >
+                        <span>{settings.mux_protocol || 'h2mux'}</span>
+                        <ChevronRight className={`dropdown-arrow ${openDropdown === 'mux_protocol' ? 'open' : ''}`} size={16} />
+                      </button>
 
-                    {openDropdown === 'mux_protocol' && (
-                      <div className="context-menu">
-                        {['h2mux', 'smux', 'yamux'].map((proto) => (
+                      {openDropdown === 'mux_protocol' && (
+                        <div className="context-menu">
+                          {['h2mux', 'smux', 'yamux'].map((proto) => (
+                            <div
+                              key={proto}
+                              className={`context-menu-item ${settings.mux_protocol === proto ? 'active' : ''}`}
+                              onClick={() => {
+                                updateSetting('mux_protocol', proto);
+                                setOpenDropdown(null);
+                              }}
+                            >
+                              <span>{proto}</span>
+                              {settings.mux_protocol === proto && <Check size={16} />}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="setting-divider"></div>
+
+                  <div className="setting-row">
+                    <span className="setting-label-sub">{t('advancedTab.concurrency')}</span>
+                    <input
+                      type="number"
+                      className="number-input-styled"
+                      min={1}
+                      max={128}
+                      value={settings.mux_concurrency ?? 4}
+                      onChange={(e) => updateSetting('mux_concurrency', parseInt(e.target.value) || 1)}
+                    />
+                  </div>
+
+                  <div className="setting-divider"></div>
+
+                  <div className="setting-row">
+                    <span className="setting-label-sub">{t('advancedTab.addPadding')}</span>
+                    <div className="custom-dropdown-container">
+                      <button
+                        type="button"
+                        className="dropdown-trigger-btn"
+                        onClick={() => toggleDropdown('mux_padding')}
+                      >
+                        <span>{settings.mux_padding ? t('advancedTab.yes') : t('advancedTab.no')}</span>
+                        <ChevronRight className={`dropdown-arrow ${openDropdown === 'mux_padding' ? 'open' : ''}`} size={16} />
+                      </button>
+
+                      {openDropdown === 'mux_padding' && (
+                        <div className="context-menu">
                           <div
-                            key={proto}
-                            className={`context-menu-item ${settings.mux_protocol === proto ? 'active' : ''}`}
+                            className={`context-menu-item ${settings.mux_padding ? 'active' : ''}`}
                             onClick={() => {
-                              updateSetting('mux_protocol', proto);
+                              updateSetting('mux_padding', true);
                               setOpenDropdown(null);
                             }}
                           >
-                            <span>{proto}</span>
-                            {settings.mux_protocol === proto && <Check size={16} />}
+                            <span>{t('advancedTab.yes')}</span>
+                            {settings.mux_padding && <Check size={16} />}
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="setting-divider"></div>
-
-                <div className="setting-row">
-                  <span className="setting-label-sub">{t('advancedTab.concurrency')}</span>
-                  <input
-                    type="number"
-                    className="number-input-styled"
-                    min={1}
-                    max={128}
-                    value={settings.mux_concurrency ?? 4}
-                    onChange={(e) => updateSetting('mux_concurrency', parseInt(e.target.value) || 1)}
-                  />
-                </div>
-
-                <div className="setting-divider"></div>
-
-                <div className="setting-row">
-                  <span className="setting-label-sub">{t('advancedTab.addPadding')}</span>
-                  <div className="custom-dropdown-container">
-                    <button
-                      type="button"
-                      className="dropdown-trigger-btn"
-                      onClick={() => toggleDropdown('mux_padding')}
-                    >
-                      <span>{settings.mux_padding ? t('advancedTab.yes') : t('advancedTab.no')}</span>
-                      <ChevronRight className={`dropdown-arrow ${openDropdown === 'mux_padding' ? 'open' : ''}`} size={16} />
-                    </button>
-
-                    {openDropdown === 'mux_padding' && (
-                      <div className="context-menu">
-                        <div
-                          className={`context-menu-item ${settings.mux_padding ? 'active' : ''}`}
-                          onClick={() => {
-                            updateSetting('mux_padding', true);
-                            setOpenDropdown(null);
-                          }}
-                        >
-                          <span>{t('advancedTab.yes')}</span>
-                          {settings.mux_padding && <Check size={16} />}
+                          <div
+                            className={`context-menu-item ${!settings.mux_padding ? 'active' : ''}`}
+                            onClick={() => {
+                              updateSetting('mux_padding', false);
+                              setOpenDropdown(null);
+                            }}
+                          >
+                            <span>{t('advancedTab.no')}</span>
+                            {!settings.mux_padding && <Check size={16} />}
+                          </div>
                         </div>
-                        <div
-                          className={`context-menu-item ${!settings.mux_padding ? 'active' : ''}`}
-                          onClick={() => {
-                            updateSetting('mux_padding', false);
-                            setOpenDropdown(null);
-                          }}
-                        >
-                          <span>{t('advancedTab.no')}</span>
-                          {!settings.mux_padding && <Check size={16} />}
-                        </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
-            )}
+            </div>
           </div>
           <p className="section-description">{t('advancedTab.muxDesc')}</p>
         </div>
@@ -252,56 +256,58 @@ export default function AdvancedSettingsTab() {
               </label>
             </div>
 
-            {settings.tls_spoof_enabled && (
-              <div className="card-expanded-content">
-                <div className="setting-divider"></div>
+            <div className={`card-collapsible ${settings.tls_spoof_enabled ? 'expanded' : ''}`}>
+              <div className="card-collapsible-inner">
+                <div className="card-expanded-content">
+                  <div className="setting-divider"></div>
 
-                <div className="setting-row">
-                  <span className="setting-label-sub">{t('advancedTab.domain')}</span>
-                  <input
-                    type="text"
-                    className="text-input-styled"
-                    value={settings.tls_spoof_domain || ''}
-                    onChange={(e) => updateSetting('tls_spoof_domain', e.target.value)}
-                    placeholder="google.com"
-                  />
-                </div>
+                  <div className="setting-row">
+                    <span className="setting-label-sub">{t('advancedTab.domain')}</span>
+                    <input
+                      type="text"
+                      className="text-input-styled"
+                      value={settings.tls_spoof_domain || ''}
+                      onChange={(e) => updateSetting('tls_spoof_domain', e.target.value)}
+                      placeholder="google.com"
+                    />
+                  </div>
 
-                <div className="setting-divider"></div>
+                  <div className="setting-divider"></div>
 
-                <div className="setting-row">
-                  <span className="setting-label-sub">{t('advancedTab.method')}</span>
-                  <div className="custom-dropdown-container">
-                    <button
-                      type="button"
-                      className="dropdown-trigger-btn"
-                      onClick={() => toggleDropdown('tls_spoof_method')}
-                    >
-                      <span>{settings.tls_spoof_method || 'wrong-ack'}</span>
-                      <ChevronRight className={`dropdown-arrow ${openDropdown === 'tls_spoof_method' ? 'open' : ''}`} size={16} />
-                    </button>
+                  <div className="setting-row">
+                    <span className="setting-label-sub">{t('advancedTab.method')}</span>
+                    <div className="custom-dropdown-container">
+                      <button
+                        type="button"
+                        className="dropdown-trigger-btn"
+                        onClick={() => toggleDropdown('tls_spoof_method')}
+                      >
+                        <span>{settings.tls_spoof_method || 'wrong-ack'}</span>
+                        <ChevronRight className={`dropdown-arrow ${openDropdown === 'tls_spoof_method' ? 'open' : ''}`} size={16} />
+                      </button>
 
-                    {openDropdown === 'tls_spoof_method' && (
-                      <div className="context-menu">
-                        {['wrong-ack', 'wrong-md5', 'wrong-timestamp'].map((method) => (
-                          <div
-                            key={method}
-                            className={`context-menu-item ${settings.tls_spoof_method === method ? 'active' : ''}`}
-                            onClick={() => {
-                              updateSetting('tls_spoof_method', method);
-                              setOpenDropdown(null);
-                            }}
-                          >
-                            <span>{method}</span>
-                            {settings.tls_spoof_method === method && <Check size={16} />}
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                      {openDropdown === 'tls_spoof_method' && (
+                        <div className="context-menu">
+                          {['wrong-ack', 'wrong-md5', 'wrong-timestamp'].map((method) => (
+                            <div
+                              key={method}
+                              className={`context-menu-item ${settings.tls_spoof_method === method ? 'active' : ''}`}
+                              onClick={() => {
+                                updateSetting('tls_spoof_method', method);
+                                setOpenDropdown(null);
+                              }}
+                            >
+                              <span>{method}</span>
+                              {settings.tls_spoof_method === method && <Check size={16} />}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
-            )}
+            </div>
           </div>
           <p className="section-description">{t('advancedTab.tlsSpoofDesc')}</p>
         </div>

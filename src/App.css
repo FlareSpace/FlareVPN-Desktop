@@ -20,8 +20,7 @@
   flex: 1;
   display: flex;
   flex-direction: row;
-  background: radial-gradient(circle at right center, rgba(59, 130, 246, 0.03) 0%, transparent 60%), 
-              var(--bg-primary);
+  background-color: var(--bg-primary);
   position: relative;
   overflow: hidden;
 }
@@ -93,6 +92,19 @@
 
 .subscriptions-panel.expanded-mode {
   margin-bottom: 0; 
+}
+
+.empty-subscriptions {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding-left: 12px;
+  color: var(--text-secondary);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.5;
+  user-select: none;
 }
 
 .collapse-all-btn {

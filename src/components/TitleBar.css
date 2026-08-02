@@ -1,6 +1,9 @@
 .titlebar {
   height: 30px;
-  background: var(--bg-secondary);
+  background: var(--bg-header-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border-header-glass);
   user-select: none;
   display: flex;
   justify-content: space-between;
@@ -38,7 +41,7 @@
 .titlebar-btn:hover {
   background: var(--bg-button);
   color: var(--text-primary);
-  transform: none; 
+  transform: none;
 }
 
 .titlebar-btn.close:hover {

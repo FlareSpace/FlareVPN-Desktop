@@ -91,7 +91,10 @@ export default function Sidebar() {
 
         <div className="menu-group">
           <div className="menu-header">{t('sidebar.appearance')}</div>
-          <div className="menu-item">
+          <div 
+            className={`menu-item ${activeTab === 'personalization' ? 'active' : ''}`}
+            onClick={() => setActiveTab('personalization')}
+          >
             <BrushFilled size={20} className="menu-icon" />
             <span className="menu-label">{t('sidebar.personalization')}</span>
           </div>

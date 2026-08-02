@@ -23,10 +23,19 @@
   },
   "languageTab": {
     "title": "Язык",
-    "selectLanguage": "Выберите язык",
+    "selectLanguage": "Язык приложения",
     "russian": "Русский",
     "english": "English",
     "auto": "Авто"
+  },
+  "personalizationTab": {
+    "title": "Персонализация",
+    "themeSection": "Тема",
+    "style": "Стиль",
+    "customColor": "Свой цвет",
+    "themeAuto": "Авто",
+    "themeLight": "День",
+    "themeDark": "Ночь"
   },
   "basicTab": {
     "vpnModeSection": "Режим VPN",
@@ -37,8 +46,19 @@
     "apps": "Приложения",
     "domains": "Домены",
     "addAppPlaceholder": "Введите имя процесса (например, chrome.exe)",
+    "selectProcess": "Выберите процесс",
+    "runningProcesses": "Запущенные процессы",
+    "searchProcessPlaceholder": "Поиск процесса...",
+    "refreshProcesses": "Обновить",
+    "alreadyAdded": "Добавлен",
+    "addManual": "Ввести вручную",
+    "selectFromRunning": "Выбрать из запущенных",
+    "loadingProcesses": "Загрузка процессов...",
+    "noProcessesFound": "Процессы не найдены",
     "domainsNotSupportedYet": "Редактирование доменов пока недоступно",
     "mode": "Режим",
+    "appsMode": "Режим для приложений",
+    "domainsMode": "Режим для сайтов",
     "whitelist": "Белый список",
     "blacklist": "Черный список",
     "proxyPort": "Порт локального прокси",
@@ -86,12 +106,20 @@
   "subscriptionCard": {
     "expires": "Истекает: {{date}}",
     "update": "Обновление: {{interval}}",
+    "edit": "Редактировать",
     "delete": "Удалить",
     "updateSuccess": "Подписка {{name}} успешно обновлена",
     "updateError": "Не удалось обновить подписку {{name}}",
     "deleteSuccess": "Подписка {{name}} успешно удалена",
     "deleteError": "Ошибка удаления подписки {{name}}",
-    "chain": "Цепь"
+    "editSuccess": "Подписка {{name}} успешно обновлена",
+    "editModalTitle": "Редактирование подписки",
+    "nameLabel": "Название подписки",
+    "urlLabel": "URL Подписки",
+    "save": "Сохранить",
+    "cancel": "Отмена",
+    "chain": "Цепь",
+    "test": "Тестировать"
   },
   "clipboard": {
     "button": "Буфер обмена",
@@ -156,6 +184,7 @@
     "networkStackDescGvisor": "Высокая совместимость, поддерживает все настройки туннеля, среднее энергопотребление."
   },
   "home": {
-    "collapseAll": "Свернуть все"
+    "collapseAll": "Свернуть все",
+    "noProfiles": "Пока что нет добавленных профилей!"
   }
 }

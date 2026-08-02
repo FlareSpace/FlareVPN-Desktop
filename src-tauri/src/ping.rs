@@ -2,9 +2,7 @@ use serde::Serialize;
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter};
 use tauri_plugin_shell::ShellExt;
-use tempfile::NamedTempFile;
 use uuid::Uuid;
-use std::io::Write;
 use serde_json::{json, Value};
 use std::net::{TcpListener, ToSocketAddrs};
 
@@ -399,10 +397,13 @@ pub async fn ping_via_proxy(
         }
     });
 
-    let mut temp_file = NamedTempFile::new().map_err(|e| e.to_string())?;
-    let config_str = serde_json::to_string_pretty(&config).unwrap();
-    temp_file.write_all(config_str.as_bytes()).map_err(|e| e.to_string())?;
-    let temp_path = temp_file.path().to_string_lossy().to_string();
+    let temp_dir = crate::tunnel::get_temp_configs_dir(&app)?;
+    let ping_config_path = temp_dir.join(format!("ping_cfg_{}.json", Uuid::new_v4()));
+    let config_str = serde_json::to_string_pretty(&config).map_err(|e| e.to_string())?;
+    tokio::fs::write(&ping_config_path, config_str.as_bytes())
+        .await
+        .map_err(|e| e.to_string())?;
+    let temp_path = ping_config_path.to_string_lossy().to_string();
 
     let (mut rx, child) = app.shell().sidecar("sing-box")
         .map_err(|e| format!("Sidecar err: {}", e))?
@@ -442,6 +443,12 @@ pub async fn ping_via_proxy(
 
     if !ready {
         let _ = child.kill();
+        for _ in 0..5 {
+            if tokio::fs::remove_file(&ping_config_path).await.is_ok() {
+                break;
+            }
+            sleep(Duration::from_millis(50)).await;
+        }
         return Err("Clash API failed to start".to_string());
     }
 
@@ -514,6 +521,13 @@ pub async fn ping_via_proxy(
     }
 
     let _ = child.kill();
+
+    for _ in 0..5 {
+        if tokio::fs::remove_file(&ping_config_path).await.is_ok() {
+            break;
+        }
+        sleep(Duration::from_millis(50)).await;
+    }
 
     Ok(final_results)
 }

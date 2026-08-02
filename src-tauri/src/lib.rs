@@ -6,11 +6,97 @@ pub mod tunnel;
 
 use db::{DbState, Profile, AppSettings};
 use parser::clipboard::{parse_clipboard_data, SubscriptionParseResult};
+use sysinfo::{System, ProcessesToUpdate};
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{TrayIconBuilder, TrayIconEvent, MouseButton, MouseButtonState},
     Manager, WindowEvent, State, Emitter,
 };
+
+#[derive(serde::Serialize)]
+pub struct ProcessItem {
+    pub name: String,
+    pub path: Option<String>,
+}
+
+const IGNORED_SYSTEM_PROCESSES: &[&str] = &[
+    "system",
+    "system idle process",
+    "registry",
+    "memory compression",
+    "smss.exe",
+    "csrss.exe",
+    "wininit.exe",
+    "services.exe",
+    "lsass.exe",
+    "svchost.exe",
+    "fontdrvhost.exe",
+    "sihost.exe",
+    "dwm.exe",
+    "taskhostw.exe",
+    "conhost.exe",
+    "searchindexer.exe",
+    "searchhost.exe",
+    "runtimebroker.exe",
+    "ctfmon.exe",
+    "wlanext.exe",
+    "spoolsv.exe",
+    "audiodg.exe",
+    "dllhost.exe",
+    "compattelrunner.exe",
+    "smartscreen.exe",
+    "securityhealthservice.exe",
+    "securityhealthhost.exe",
+    "adjustservice.exe",
+    "aggregatorhost.exe",
+    "wmiprvse.exe",
+    "shellexperiencehost.exe",
+    "startmenuexperiencehost.exe",
+    "textinputhost.exe",
+    "applicationframehost.exe",
+    "usermodefontdriver.exe",
+    "dashost.exe",
+];
+
+#[tauri::command]
+async fn get_active_processes() -> Result<Vec<ProcessItem>, String> {
+    tokio::task::spawn_blocking(|| {
+        let mut sys = System::new_all();
+        sys.refresh_processes(ProcessesToUpdate::All, true);
+
+        let mut processes_map = std::collections::BTreeMap::new();
+
+        for (_pid, process) in sys.processes() {
+            let name = process.name().to_string_lossy().to_string();
+            if name.is_empty() {
+                continue;
+            }
+
+            let path_str = process.exe().map(|p| p.to_string_lossy().to_string());
+            let key = name.to_lowercase();
+
+            if key.starts_with('[') || key.ends_with(']') || IGNORED_SYSTEM_PROCESSES.contains(&key.as_str()) {
+                continue;
+            }
+
+            if !processes_map.contains_key(&key) {
+                processes_map.insert(key, ProcessItem {
+                    name,
+                    path: path_str,
+                });
+            }
+        }
+
+
+        let mut list: Vec<ProcessItem> = processes_map.into_values().collect();
+        list.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+        list
+    })
+    .await
+    .map_err(|e| e.to_string())
+}
+
+
 
 #[tauri::command]
 async fn parse_clipboard(text: String, db_state: State<'_, DbState>) -> Result<SubscriptionParseResult, String> {
@@ -101,14 +187,46 @@ pub fn run() {
                 .expect("Failed to resolve app data directory");
             std::fs::create_dir_all(&app_data_dir)
                 .expect("Failed to create app data directory");
+
+            let temp_configs_dir = app_data_dir.join("temp_configs");
+            let _ = std::fs::create_dir_all(&temp_configs_dir);
+            tunnel::cleanup_orphaned_temp_configs(&temp_configs_dir);
+
             let db_path = app_data_dir.join("profiles.db");
             let db_state = DbState::new(db_path.to_str().expect("Invalid db path"))
                 .expect("Failed to initialize database");
             app.manage(db_state);
-            let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
-            let show_i = MenuItem::with_id(app, "show", "Show", true, None::<&str>)?;
-            let connect_i = MenuItem::with_id(app, "connect", "Connect/Disconnect", true, None::<&str>)?;
+
+            if let Some(window) = app.get_webview_window("main") {
+                #[cfg(target_os = "windows")]
+                {
+                    if window_vibrancy::apply_acrylic(&window, Some((18, 18, 18, 204))).is_err() {
+                        let _ = window_vibrancy::apply_mica(&window, Some(true));
+                    }
+                }
+            }
+
+            use tauri::Listener;
+
+            let quit_i = MenuItem::with_id(app, "quit", "Закрыть Flare VPN", true, None::<&str>)?;
+            let show_i = MenuItem::with_id(app, "show", "Открыть Flare VPN", true, None::<&str>)?;
+            let connect_i = MenuItem::with_id(app, "connect", "Подключить", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show_i, &connect_i, &quit_i])?;
+
+            let connect_i_started = connect_i.clone();
+            app.listen("tunnel-started", move |_| {
+                let _ = connect_i_started.set_text("Отключить");
+            });
+
+            let connect_i_stopped = connect_i.clone();
+            app.listen("tunnel-stopped", move |_| {
+                let _ = connect_i_stopped.set_text("Подключить");
+            });
+
+            let connect_i_error = connect_i.clone();
+            app.listen("tunnel-error", move |_| {
+                let _ = connect_i_error.set_text("Подключить");
+            });
 
             let _tray = TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
@@ -116,8 +234,12 @@ pub fn run() {
                 .show_menu_on_left_click(true)
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "quit" => {
-                        let _ = sys_proxy::disable_system_proxy();
-                        app.exit(0);
+                        let app_handle = app.clone();
+                        tauri::async_runtime::spawn(async move {
+                            let _ = tunnel::stop_tunnel(app_handle.clone()).await;
+                            let _ = sys_proxy::disable_system_proxy();
+                            app_handle.exit(0);
+                        });
                     }
                     "show" => {
                         if let Some(window) = app.get_webview_window("main") {
@@ -166,7 +288,9 @@ pub fn run() {
             ping_profile_direct,
             get_app_settings,
             update_app_settings,
+            get_active_processes,
             tunnel::start_tunnel,
+
             tunnel::stop_tunnel,
             tunnel::is_tunnel_running
         ])

@@ -33,7 +33,12 @@
 }
 
 .hamburger-button:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--bg-button);
+}
+
+.menu-item:hover {
+  background: var(--bg-button);
+  color: var(--text-primary);
 }
 
 .sidebar-content {
@@ -91,13 +96,10 @@
   white-space: nowrap;
 }
 
-.menu-item:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text-primary);
-}
+
 
 .menu-item.active {
-  background: rgba(59, 130, 246, 0.15);
+  background: color-mix(in srgb, var(--accent-color) 15%, transparent);
   color: var(--accent-color);
 }
 

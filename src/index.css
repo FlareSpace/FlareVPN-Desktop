@@ -1,30 +1,60 @@
 :root {
-  --bg-primary: #121212;
-  --bg-secondary: #1E1E1E;
-  --bg-card: #252525;
-  --bg-card-hover: #2C2C2C;
-  --bg-button: #333333;
-  --bg-button-hover: #444444;
+  --bg-primary: rgba(18, 18, 22, 0.80);
+  --bg-secondary: rgba(26, 26, 32, 0.70);
+  --bg-card: rgba(37, 37, 44, 0.60);
+  --bg-card-hover: rgba(48, 48, 58, 0.75);
+  --bg-button: rgba(50, 50, 60, 0.60);
+  --bg-button-hover: rgba(65, 65, 78, 0.75);
   --text-primary: #FFFFFF;
-  --text-secondary: #A0A0A0;
+  --text-secondary: rgba(255, 255, 255, 0.65);
   --accent-color: #3B82F6;
   --accent-hover: #60A5FA;
-  --border-color: #333333;
+  --border-color: rgba(255, 255, 255, 0.08);
   --danger: #EF4444;
   --success: #10B981;
   --border-radius-sm: 6px;
   --border-radius-md: 12px;
   --border-radius-lg: 24px;
   
+  --bg-header-glass: rgba(32, 32, 38, 0.75);
+  --border-header-glass: rgba(255, 255, 255, 0.08);
+
+  --context-menu-bg: rgba(26, 26, 32, 0.95);
+  --context-menu-border: rgba(255, 255, 255, 0.12);
+  --context-menu-hover: rgba(255, 255, 255, 0.08);
+  --slider-off-bg: rgba(255, 255, 255, 0.12);
+  
   --transition-fast: 0.15s ease;
   --transition-normal: 0.25s ease;
 }
 
-body {
+html[data-theme="light"] {
+  --bg-primary: #F4F4F5;
+  --bg-secondary: #E4E4E7;
+  --bg-card: #FFFFFF;
+  --bg-card-hover: #FAFAFA;
+  --bg-button: #E4E4E7;
+  --bg-button-hover: #D4D4D8;
+  --text-primary: #0F172A;
+  --text-secondary: rgba(15, 23, 42, 0.65);
+  --accent-color: #2563EB;
+  --accent-hover: #3B82F6;
+  --border-color: rgba(0, 0, 0, 0.08);
+
+  --bg-header-glass: #E4E4E7;
+  --border-header-glass: rgba(0, 0, 0, 0.10);
+
+  --context-menu-bg: #FFFFFF;
+  --context-menu-border: rgba(0, 0, 0, 0.12);
+  --context-menu-hover: rgba(0, 0, 0, 0.05);
+  --slider-off-bg: rgba(0, 0, 0, 0.15);
+}
+
+html, body {
   margin: 0;
   padding: 0;
   font-family: "Twemoji Country Flags", 'Inter', 'Roboto', 'Segoe UI', sans-serif;
-  background-color: var(--bg-primary);
+  background: transparent !important;
   color: var(--text-primary);
   user-select: none;
   -webkit-user-select: none;
@@ -61,6 +91,9 @@ img, a {
   flex-direction: column;
   height: 100vh;
   width: 100vw;
+  background-color: var(--bg-primary);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 .main-content {
@@ -76,6 +109,8 @@ img, a {
   display: flex;
   flex-direction: column;
   position: relative;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
 .right-panel {
@@ -84,7 +119,7 @@ img, a {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background-color: var(--bg-primary);
+  background-color: transparent;
 }
 
 button {

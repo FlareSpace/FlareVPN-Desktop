@@ -24,13 +24,62 @@ impl TunnelState {
     }
 }
 
+pub fn get_temp_configs_dir(app: &AppHandle) -> Result<PathBuf, String> {
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("Failed to resolve app data directory: {}", e))?;
+    let temp_dir = app_data_dir.join("temp_configs");
+    if !temp_dir.exists() {
+        std::fs::create_dir_all(&temp_dir)
+            .map_err(|e| format!("Failed to create temp_configs directory: {}", e))?;
+    }
+    Ok(temp_dir)
+}
+
+pub fn cleanup_orphaned_temp_configs(temp_dir: &std::path::Path) {
+    if let Ok(entries) = std::fs::read_dir(temp_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_file() {
+                if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                    if name.starts_with("flarevpn_cfg_") || name.starts_with("ping_cfg_") {
+                        let _ = std::fs::remove_file(path);
+                    }
+                }
+            }
+        }
+    }
+}
+
 async fn cleanup_temp_config(state: &TunnelState) {
     let path_to_remove = {
         let mut path_guard = state.current_config_path.lock().await;
         path_guard.take()
     };
     if let Some(path) = path_to_remove {
-        let _ = tokio::fs::remove_file(path).await;
+        for _ in 0..5 {
+            if tokio::fs::remove_file(&path).await.is_ok() {
+                break;
+            }
+            tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+        }
+    }
+}
+
+#[cfg(target_os = "windows")]
+async fn cleanup_stale_tun_bindings() {
+    const CREATE_NO_WINDOW: u32 = 0x08000000;
+    let addresses_to_clean = ["172.19.0.1", "198.18.0.1", "172.28.0.1"];
+    let interfaces_to_clean = ["FlareVPN-TUN", "sing-box", "wintun"];
+
+    for iface in &interfaces_to_clean {
+        for addr in &addresses_to_clean {
+            let mut cmd = tokio::process::Command::new("netsh");
+            cmd.creation_flags(CREATE_NO_WINDOW);
+            cmd.args(["interface", "ipv4", "delete", "address", iface, addr]);
+            let _ = cmd.output().await;
+        }
     }
 }
 
@@ -40,14 +89,13 @@ async fn stop_child_process_gracefully(child: CommandChild) {
     {
         const CREATE_NO_WINDOW: u32 = 0x08000000;
 
-
         let mut soft_kill = tokio::process::Command::new("taskkill");
         soft_kill.creation_flags(CREATE_NO_WINDOW);
-        soft_kill.args(["/F", "/PID", &pid.to_string()]);
+        soft_kill.args(["/PID", &pid.to_string()]);
         let _ = soft_kill.output().await;
 
         let check_interval = tokio::time::Duration::from_millis(50);
-        let max_wait = tokio::time::Duration::from_millis(600);
+        let max_wait = tokio::time::Duration::from_millis(400);
         let start = tokio::time::Instant::now();
 
         while start.elapsed() < max_wait {
@@ -62,8 +110,12 @@ async fn stop_child_process_gracefully(child: CommandChild) {
             }
             tokio::time::sleep(check_interval).await;
         }
-    }
 
+        let mut hard_kill = tokio::process::Command::new("taskkill");
+        hard_kill.creation_flags(CREATE_NO_WINDOW);
+        hard_kill.args(["/F", "/PID", &pid.to_string()]);
+        let _ = hard_kill.output().await;
+    }
 
     let _ = child.kill();
 }
@@ -81,22 +133,20 @@ pub async fn start_tunnel(app: AppHandle, config_json: String) -> Result<(), Str
         })
         .unwrap_or(true);
 
-
-
-
     #[cfg(target_os = "windows")]
-    if is_tun && !is_elevated::is_elevated() {
-        return Err("admin_required".to_string());
+    if is_tun {
+        if !is_elevated::is_elevated() {
+            return Err("admin_required".to_string());
+        }
+        cleanup_stale_tun_bindings().await;
     }
 
     let state = app.state::<TunnelState>();
-
 
     if state.is_proxy_mode.load(Ordering::SeqCst) {
         let _ = sys_proxy::disable_system_proxy();
     }
     
-
     let existing_child = {
         let mut proc_guard = state.process.lock().await;
         proc_guard.take()
@@ -107,12 +157,12 @@ pub async fn start_tunnel(app: AppHandle, config_json: String) -> Result<(), Str
         stop_child_process_gracefully(child).await;
     }
 
-
     cleanup_temp_config(&state).await;
 
 
+    let temp_dir = get_temp_configs_dir(&app)?;
     let temp_filename = format!("flarevpn_cfg_{}.json", uuid::Uuid::new_v4());
-    let config_path = std::env::temp_dir().join(temp_filename);
+    let config_path = temp_dir.join(temp_filename);
     tokio::fs::write(&config_path, &config_json)
         .await
         .map_err(|e| e.to_string())?;

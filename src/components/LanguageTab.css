@@ -15,82 +15,132 @@
   z-index: 10;
   width: 100%;
   padding: 24px;
-  background: linear-gradient(180deg, rgba(18, 18, 18, 0.98) 0%, rgba(18, 18, 18, 0.90) 100%);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--bg-header-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border-header-glass);
 }
 
 .language-tab .tab-header h1 {
   font-size: 24px;
   font-weight: 600;
   margin: 0;
+  color: var(--text-primary);
 }
 
-.settings-content {
-  padding: 24px;
-}
-
-.settings-section {
+.language-tab .settings-content {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 20px;
+  padding: 24px;
+  padding-bottom: 32px;
 }
 
-.language-row {
+.language-tab .settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.language-tab .settings-card {
+  background-color: var(--bg-card);
+  border-radius: 16px;
+  overflow: visible;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--border-color);
+  padding: 0 20px;
+}
+
+.language-tab .setting-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: var(--bg-secondary);
-  border-radius: 12px;
-  padding: 16px;
-  cursor: pointer;
+  padding: 18px 0;
+  min-height: 58px;
+}
+
+.language-tab .setting-label {
+  font-size: 16px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.language-tab .custom-dropdown-container {
   position: relative;
 }
 
-.language-row-label {
-  font-size: 15px;
-}
-
-.language-row-value {
+.language-tab .dropdown-trigger-btn {
   display: flex;
   align-items: center;
-  gap: 8px;
-  color: var(--accent-color, #4285f4);
+  gap: 6px;
+  background: transparent;
+  border: none;
+  padding: 4px 0;
+  color: var(--accent-color, #60a5fa);
   font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
 }
 
-.language-context-menu {
+.language-tab .dropdown-trigger-btn:hover {
+  opacity: 0.85;
+}
+
+.language-tab .dropdown-arrow {
+  transition: transform 0.2s ease;
+  color: var(--accent-color, #60a5fa);
+}
+
+.language-tab .dropdown-arrow.open {
+  transform: rotate(90deg);
+}
+
+.language-tab .context-menu {
   position: absolute;
-  top: 100%;
+  top: calc(100% + 6px);
   right: 0;
-  background-color: rgba(30, 30, 30, 0.6);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 8px;
+  min-width: 170px;
+  background: var(--context-menu-bg, rgba(26, 26, 32, 0.95));
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--context-menu-border, rgba(255, 255, 255, 0.12));
+  border-radius: 16px;
+  padding: 6px;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  z-index: 100;
-  min-width: 180px;
-  margin-top: 8px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+  z-index: 1050;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.25);
+  transform-origin: top right;
+  animation: contextMenuPop 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.language-context-menu-item {
-  padding: 12px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 0.2s;
+.language-tab .context-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-radius: 10px;
   font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
-.language-context-menu-item:hover {
-  background-color: rgba(255, 255, 255, 0.05);
+.language-tab .context-menu-item:hover {
+  background: var(--context-menu-hover, rgba(255, 255, 255, 0.08));
 }
 
-.language-context-menu-item.active {
-  color: var(--accent-color, #4285f4);
+.language-tab .context-menu-item.active {
+  color: var(--accent-color, #60a5fa);
+  background: color-mix(in srgb, var(--accent-color, #3b82f6) 15%, transparent);
+  font-weight: 600;
 }
+
+@keyframes contextMenuPop {
+  from { opacity: 0; transform: translateY(-6px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+

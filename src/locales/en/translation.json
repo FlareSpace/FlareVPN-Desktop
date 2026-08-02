@@ -23,10 +23,19 @@
   },
   "languageTab": {
     "title": "Language",
-    "selectLanguage": "Select Language",
+    "selectLanguage": "Application language",
     "russian": "Русский",
     "english": "English",
     "auto": "Auto"
+  },
+  "personalizationTab": {
+    "title": "Personalization",
+    "themeSection": "Theme",
+    "style": "Style",
+    "customColor": "Custom color",
+    "themeAuto": "Auto",
+    "themeLight": "Day",
+    "themeDark": "Night"
   },
   "basicTab": {
     "vpnModeSection": "VPN Mode",
@@ -37,8 +46,19 @@
     "apps": "Apps",
     "domains": "Domains",
     "addAppPlaceholder": "Enter process name (e.g. chrome.exe)",
+    "selectProcess": "Select process",
+    "runningProcesses": "Running Processes",
+    "searchProcessPlaceholder": "Search process...",
+    "refreshProcesses": "Refresh",
+    "alreadyAdded": "Added",
+    "addManual": "Enter manually",
+    "selectFromRunning": "Select from running",
+    "loadingProcesses": "Loading processes...",
+    "noProcessesFound": "No processes found",
     "domainsNotSupportedYet": "Domain editing is not available yet",
     "mode": "Mode",
+    "appsMode": "Apps mode",
+    "domainsMode": "Domains mode",
     "whitelist": "Whitelist",
     "blacklist": "Blacklist",
     "proxyPort": "Proxy Port",
@@ -86,12 +106,20 @@
   "subscriptionCard": {
     "expires": "Expires: {{date}}",
     "update": "Update: {{interval}}",
+    "edit": "Edit",
     "delete": "Delete",
     "updateSuccess": "Subscription {{name}} updated successfully",
     "updateError": "Failed to update subscription {{name}}",
     "deleteSuccess": "Subscription {{name}} deleted successfully",
     "deleteError": "Failed to delete subscription {{name}}",
-    "chain": "Chain"
+    "editSuccess": "Subscription {{name}} updated successfully",
+    "editModalTitle": "Edit Subscription",
+    "nameLabel": "Subscription Name",
+    "urlLabel": "Subscription URL",
+    "save": "Save",
+    "cancel": "Cancel",
+    "chain": "Chain",
+    "test": "Test"
   },
   "clipboard": {
     "button": "Clipboard",
@@ -156,6 +184,7 @@
     "networkStackDescGvisor": "High compatibility, supports all tunnel settings, medium power consumption."
   },
   "home": {
-    "collapseAll": "Collapse all"
+    "collapseAll": "Collapse all",
+    "noProfiles": "No profiles added yet!"
   }
 }

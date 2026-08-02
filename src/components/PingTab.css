@@ -15,10 +15,10 @@
   z-index: 10;
   width: 100%;
   padding: 24px;
-  background: linear-gradient(180deg, rgba(18, 18, 18, 0.98) 0%, rgba(18, 18, 18, 0.90) 100%);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--bg-header-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border-header-glass);
 }
 
 .ping-header-title {
@@ -60,8 +60,8 @@
 
 .ping-type-card {
   flex: 1;
-  background-color: var(--bg-secondary);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 20px 16px;
   display: flex;
@@ -106,8 +106,8 @@
 
 .ping-input {
   width: 100%;
-  background-color: var(--bg-secondary);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 16px;
   color: var(--text-primary);
@@ -124,7 +124,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: var(--bg-secondary);
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 16px;
   cursor: pointer;
@@ -144,7 +145,8 @@
 }
 
 .ping-slider-container {
-  background-color: var(--bg-secondary);
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 16px 24px;
   display: flex;
@@ -197,10 +199,10 @@
   position: absolute;
   top: 100%;
   right: 0;
-  background-color: rgba(30, 30, 30, 0.6);
+  background-color: var(--context-menu-bg, rgba(30, 30, 30, 0.6));
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--context-menu-border, rgba(255, 255, 255, 0.1));
   border-radius: 8px;
   padding: 8px;
   display: flex;
@@ -209,7 +211,7 @@
   z-index: 100;
   min-width: 180px;
   margin-top: 8px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
 }
 
 .context-menu-item {
@@ -218,10 +220,11 @@
   cursor: pointer;
   transition: background-color 0.2s;
   font-size: 14px;
+  color: var(--text-primary);
 }
 
 .context-menu-item:hover {
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: var(--context-menu-hover, rgba(255, 255, 255, 0.05));
 }
 
 .context-menu-item.active {

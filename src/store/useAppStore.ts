@@ -7,11 +7,12 @@ import { patchConfigWithAdvancedSettings, getPrimaryProxyTag } from '../utils/co
 
 export type VpnStatus = 'disconnected' | 'connecting' | 'connected' | 'disconnecting';
 export type NotificationType = 'success' | 'warning' | 'error';
-export type TabType = 'home' | 'ping' | 'subscriptions' | 'language' | 'basic' | 'advanced';
+export type TabType = 'home' | 'ping' | 'subscriptions' | 'personalization' | 'language' | 'basic' | 'advanced';
 export type PingType = 'proxy' | 'tcp' | 'icmp';
 export type PingDisplayStyle = 'time' | 'icon' | 'both';
 export type PingResult = { status: 'loading' | 'done'; latency?: number; error?: string };
 export type LanguageType = 'auto' | 'en' | 'ru';
+export type ThemeStyle = 'auto' | 'light' | 'dark';
 
 export interface Profile {
   id: string;
@@ -58,6 +59,8 @@ export interface AppSettings {
   auto_update_interval: number;
   split_tunneling_enabled: boolean;
   split_tunneling_mode: string;
+  split_tunneling_apps_mode: string;
+  split_tunneling_domains_mode: string;
   split_tunneling_apps: string[];
   split_tunneling_domains: string[];
   fragmentation_enabled: boolean;
@@ -101,10 +104,16 @@ interface AppState {
   
   settings: AppSettings;
   language: LanguageType;
+  themeStyle: ThemeStyle;
+  customColorEnabled: boolean;
+  customAccentColor: string;
   vpnMode: 'TUN' | 'Proxy';
   loadSettings: () => Promise<void>;
   updateSetting: <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => Promise<void>;
   setLanguage: (lang: LanguageType) => void;
+  setThemeStyle: (style: ThemeStyle) => void;
+  setCustomColorEnabled: (enabled: boolean) => void;
+  setCustomAccentColor: (color: string) => void;
 
   setStatus: (status: VpnStatus) => void;
   addSubscription: (sub: Subscription) => void;
@@ -124,6 +133,7 @@ interface AppState {
   setVpnMode: (mode: 'TUN' | 'Proxy') => void;
   startPing: (profileIds: string[]) => void;
   updateSubscription: (id: string) => Promise<void>;
+  updateSubscriptionDetails: (id: string, name: string, urlOrBase64: string) => Promise<void>;
   removeSubscription: (id: string) => Promise<void>;
 }
 
@@ -146,6 +156,12 @@ export const useAppStore = create<AppState>()(
       pingedProfileIds: new Set<string>(),
       vpnMode: 'TUN',
       language: 'auto',
+      themeStyle: 'auto',
+      customColorEnabled: false,
+      customAccentColor: '#5B8CFF',
+      setThemeStyle: (style: ThemeStyle) => set({ themeStyle: style }),
+      setCustomColorEnabled: (enabled: boolean) => set({ customColorEnabled: enabled }),
+      setCustomAccentColor: (color: string) => set({ customAccentColor: color }),
       
       settings: {
         auto_update: false,
@@ -161,6 +177,8 @@ export const useAppStore = create<AppState>()(
         auto_update_interval: 3600,
         split_tunneling_enabled: false,
         split_tunneling_mode: 'whitelist',
+        split_tunneling_apps_mode: 'whitelist',
+        split_tunneling_domains_mode: 'whitelist',
         split_tunneling_apps: [],
         split_tunneling_domains: [],
         fragmentation_enabled: false,
@@ -357,9 +375,11 @@ export const useAppStore = create<AppState>()(
                 {
                   type: 'tun',
                   tag: 'tun-in',
-                  address: ['172.19.0.1/30'],
+                  interface_name: 'FlareVPN-TUN',
+                  address: ['198.18.0.1/30'],
                   mtu: state.settings.mtu_value || 1500,
                   auto_route: true,
+                  strict_route: true,
                   stack: state.settings.network_stack || 'mixed',
                   route_exclude_address: [
                     "192.168.0.0/16",
@@ -459,7 +479,7 @@ export const useAppStore = create<AppState>()(
               }
 
               const domains = rawDomains
-                .map(d => d.trim().toLowerCase().replace(/^\./, ''))
+                .map(d => d.trim().toLowerCase().replace(/^(\*\.|\.)/, ''))
                 .filter(Boolean);
 
               const hasProcessRules = processNames.size > 0 || processPaths.size > 0;
@@ -469,35 +489,54 @@ export const useAppStore = create<AppState>()(
                 if (!parsedConfig.route) parsedConfig.route = { rules: [] };
                 if (!parsedConfig.route.rules) parsedConfig.route.rules = [];
 
-                const isBlacklist = state.settings.split_tunneling_mode === 'blacklist';
+                const appsMode = state.settings.split_tunneling_apps_mode || state.settings.split_tunneling_mode || 'whitelist';
+                const domainsMode = state.settings.split_tunneling_domains_mode || state.settings.split_tunneling_mode || 'whitelist';
 
-                const splitRule: any = {};
-                if (processNames.size > 0) splitRule.process_name = Array.from(processNames);
-                if (processPaths.size > 0) splitRule.process_path = Array.from(processPaths);
-                if (hasDomainRules) splitRule.domain_suffix = domains;
+                // 1. Whitelist rules (proxy) unshifted first
+                if (hasProcessRules && appsMode === 'whitelist') {
+                  const appRule: any = { outbound: primaryProxyTag };
+                  if (processNames.size > 0) appRule.process_name = Array.from(processNames);
+                  if (processPaths.size > 0) appRule.process_path = Array.from(processPaths);
+                  parsedConfig.route.rules.unshift(appRule);
+                }
 
-                if (isBlacklist) {
-                  splitRule.outbound = 'direct';
-                  parsedConfig.route.rules.unshift(splitRule);
-
-                  if (hasDomainRules && parsedConfig.dns?.rules) {
-                    parsedConfig.dns.rules.unshift({
-                      domain_suffix: domains,
-                      server: 'dns-direct'
-                    });
-                  }
-                } else {
-                  splitRule.outbound = primaryProxyTag;
-                  parsedConfig.route.rules.unshift(splitRule);
-
-                  parsedConfig.route.final = 'direct';
-
-                  if (hasDomainRules && parsedConfig.dns?.rules) {
+                if (hasDomainRules && domainsMode === 'whitelist') {
+                  parsedConfig.route.rules.unshift({
+                    domain_suffix: domains,
+                    outbound: primaryProxyTag
+                  });
+                  if (parsedConfig.dns?.rules) {
                     parsedConfig.dns.rules.unshift({
                       domain_suffix: domains,
                       server: 'dns-remote'
                     });
                   }
+                }
+
+                // 2. Blacklist rules (direct) unshifted second (placed above whitelist rules)
+                if (hasProcessRules && appsMode === 'blacklist') {
+                  const appRule: any = { outbound: 'direct' };
+                  if (processNames.size > 0) appRule.process_name = Array.from(processNames);
+                  if (processPaths.size > 0) appRule.process_path = Array.from(processPaths);
+                  parsedConfig.route.rules.unshift(appRule);
+                }
+
+                if (hasDomainRules && domainsMode === 'blacklist') {
+                  parsedConfig.route.rules.unshift({
+                    domain_suffix: domains,
+                    outbound: 'direct'
+                  });
+                  if (parsedConfig.dns?.rules) {
+                    parsedConfig.dns.rules.unshift({
+                      domain_suffix: domains,
+                      server: 'dns-direct'
+                    });
+                  }
+                }
+
+                // If either apps or domains are in whitelist mode, fallback route for non-matching traffic is direct
+                if ((hasProcessRules && appsMode === 'whitelist') || (hasDomainRules && domainsMode === 'whitelist')) {
+                  parsedConfig.route.final = 'direct';
                 }
               }
             }
@@ -541,7 +580,7 @@ export const useAppStore = create<AppState>()(
       addNotification: (type, message, duration = 5) => {
         const id = crypto.randomUUID();
         set((state) => ({
-          notifications: [...state.notifications, { id, type, message, duration }]
+          notifications: [...state.notifications, { id, type, message, duration }].slice(-3)
         }));
       },
       removeNotification: (id) => {
@@ -664,6 +703,40 @@ export const useAppStore = create<AppState>()(
           throw error;
         }
       },
+      updateSubscriptionDetails: async (id: string, name: string, urlOrBase64: string) => {
+        const state = get();
+        const sub = state.subscriptions.find(s => s.id === id);
+        if (!sub) return;
+
+        const trimmedName = name.trim() || sub.name;
+        const trimmedUrl = urlOrBase64.trim() || sub.urlOrBase64;
+
+        const nameChanged = sub.name !== trimmedName;
+        const urlChanged = sub.urlOrBase64 !== trimmedUrl;
+
+        if (!nameChanged && !urlChanged) return;
+
+        set((s) => ({
+          subscriptions: s.subscriptions.map(existing => {
+            if (existing.id === id) {
+              return {
+                ...existing,
+                name: trimmedName,
+                urlOrBase64: trimmedUrl,
+              };
+            }
+            return existing;
+          })
+        }));
+
+        if (urlChanged && trimmedUrl.startsWith('http')) {
+          try {
+            await get().updateSubscription(id);
+          } catch (e) {
+            console.warn("Updated subscription URL, but auto-refresh encountered issue:", e);
+          }
+        }
+      },
       removeSubscription: async (id: string) => {
         try {
           await invoke('delete_subscription_profiles', { subscriptionId: id });
@@ -684,13 +757,14 @@ export const useAppStore = create<AppState>()(
 
         const state = get();
         
-        const pingedSet = new Set(profileIds);
-        set(() => {
-          const newResults: Record<string, PingResult> = {};
+        set((s) => {
+          const newSet = new Set(s.pingedProfileIds);
+          profileIds.forEach(id => newSet.add(id));
+          const newResults: Record<string, PingResult> = { ...s.pingResults };
           profileIds.forEach(id => {
             newResults[id] = { status: 'loading' };
           });
-          return { pingResults: newResults, pingedProfileIds: pingedSet };
+          return { pingResults: newResults, pingedProfileIds: newSet };
         });
 
         const allProfiles = state.subscriptions.flatMap(s => s.profiles);
@@ -843,6 +917,10 @@ export const useAppStore = create<AppState>()(
         pingDisplayStyle: state.pingDisplayStyle,
         pingTimeout: state.pingTimeout,
         language: state.language,
+        themeStyle: state.themeStyle,
+        customColorEnabled: state.customColorEnabled,
+        customAccentColor: state.customAccentColor,
+        settings: state.settings,
       }),
     }
   )

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronRight, RefreshCw, Gauge, MoreVertical } from 'lucide-react';
+import { ChevronRight, RefreshCw, Gauge, MoreVertical, Link, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAppStore, Subscription, Profile } from '../store/useAppStore';
 import { formatTraffic, getProtocolDisplay, formatUpdateInterval, formatDate } from '../utils/parser';
@@ -18,6 +18,7 @@ const ProfileItem = React.memo(({ profile }: { profile: Profile }) => {
   const chainProfileIds = useAppStore(state => state.chainProfileIds);
   const toggleChainProfileId = useAppStore(state => state.toggleChainProfileId);
   const pingDisplayStyle = useAppStore(state => state.pingDisplayStyle);
+  const startPing = useAppStore(state => state.startPing);
   const pingRes = useAppStore(state => 
     state.pingedProfileIds.has(profile.id) ? state.pingResults[profile.id] : undefined
   );
@@ -28,8 +29,6 @@ const ProfileItem = React.memo(({ profile }: { profile: Profile }) => {
 
   const chainIndex = chainProfileIds.indexOf(profile.id);
   const inChain = chainIndex !== -1;
-
-
 
   const protocolDisplay = useMemo(() => getProtocolDisplay(profile), [profile]);
 
@@ -66,8 +65,8 @@ const ProfileItem = React.memo(({ profile }: { profile: Profile }) => {
     e.preventDefault();
     e.stopPropagation();
     window.dispatchEvent(new CustomEvent('close-profile-context-menus', { detail: profile.id }));
-    const posX = Math.min(e.clientX, window.innerWidth - 140);
-    const posY = Math.min(e.clientY, window.innerHeight - 60);
+    const posX = Math.min(e.clientX, window.innerWidth - 180);
+    const posY = Math.min(e.clientY, window.innerHeight - 110);
     setContextMenu({ x: posX, y: posY });
   };
 
@@ -116,6 +115,19 @@ const ProfileItem = React.memo(({ profile }: { profile: Profile }) => {
           onClick={(e) => e.stopPropagation()}
         >
           <div 
+            className="context-menu-item"
+            onClick={(e) => {
+              e.stopPropagation();
+              setContextMenu(null);
+              startPing([profile.id]);
+            }}
+          >
+            <div className="context-menu-item-content">
+              <Gauge size={16} />
+              <span>{t('subscriptionCard.test')}</span>
+            </div>
+          </div>
+          <div 
             className={`context-menu-item ${inChain ? 'active-chain' : ''}`}
             onClick={(e) => {
               e.stopPropagation();
@@ -123,7 +135,11 @@ const ProfileItem = React.memo(({ profile }: { profile: Profile }) => {
               toggleChainProfileId(profile.id);
             }}
           >
-            <span>{t('subscriptionCard.chain')}</span>
+            <div className="context-menu-item-content">
+              <Link size={16} />
+              <span>{t('subscriptionCard.chain')}</span>
+            </div>
+            {inChain && <Check size={16} />}
           </div>
         </div>,
         document.body
@@ -135,11 +151,15 @@ const ProfileItem = React.memo(({ profile }: { profile: Profile }) => {
 export default function SubscriptionCard({ subscription, isExpanded, onToggle }: Props) {
   const [isUpdating, setIsUpdating] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editName, setEditName] = useState(subscription.name);
+  const [editUrl, setEditUrl] = useState(subscription.urlOrBase64);
   const menuRef = useRef<HTMLDivElement>(null);
   const { t } = useTranslation();
   
   const startPing = useAppStore(state => state.startPing);
   const updateSubscription = useAppStore(state => state.updateSubscription);
+  const updateSubscriptionDetails = useAppStore(state => state.updateSubscriptionDetails);
   const removeSubscription = useAppStore(state => state.removeSubscription);
   const addNotification = useAppStore(state => state.addNotification);
 
@@ -156,6 +176,26 @@ export default function SubscriptionCard({ subscription, isExpanded, onToggle }:
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [menuOpen]);
+
+  const handleOpenEditModal = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setMenuOpen(false);
+    setEditName(subscription.name);
+    setEditUrl(subscription.urlOrBase64);
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editName.trim() || !editUrl.trim()) return;
+    try {
+      await updateSubscriptionDetails(subscription.id, editName.trim(), editUrl.trim());
+      addNotification('success', t('subscriptionCard.editSuccess', { name: editName.trim() }), 3);
+      setIsEditModalOpen(false);
+    } catch (error) {
+      addNotification('error', t('subscriptionCard.updateError', { name: editName.trim() }), 3);
+    }
+  };
+
   const trafficInfo = formatTraffic(subscription.upload ?? -1, subscription.download ?? -1, subscription.total ?? -1);
   const used = (subscription.upload ?? 0) + (subscription.download ?? 0);
   const progress = (subscription.total && subscription.total > 0) ? (used / subscription.total) * 100 : 0;
@@ -183,6 +223,23 @@ export default function SubscriptionCard({ subscription, isExpanded, onToggle }:
     }
   };
 
+  const overlayMouseDownRef = useRef<boolean>(false);
+
+  const handleOverlayMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) {
+      overlayMouseDownRef.current = true;
+    } else {
+      overlayMouseDownRef.current = false;
+    }
+  };
+
+  const handleOverlayMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget && overlayMouseDownRef.current) {
+      setIsEditModalOpen(false);
+    }
+    overlayMouseDownRef.current = false;
+  };
+
   return (
     <div className="sub-card-container">
       <div className={`sub-card-main ${isExpanded ? 'expanded' : ''}`} onClick={onToggle}>
@@ -197,7 +254,13 @@ export default function SubscriptionCard({ subscription, isExpanded, onToggle }:
               <div className="progress-container">
                 <div className={`progress-bar-bg ${(!subscription.total || subscription.total <= 0) ? 'unlimited' : ''}`}>
                   <div className="progress-bar-fill" style={{ width: `${clampedProgress}%` }}></div>
-                  <span className="traffic-text">{trafficInfo}</span>
+                  <span className="traffic-text traffic-text-base">{trafficInfo}</span>
+                  <span 
+                    className="traffic-text traffic-text-overlay"
+                    style={{ clipPath: `inset(0 ${100 - clampedProgress}% 0 0)` }}
+                  >
+                    {trafficInfo}
+                  </span>
                 </div>
               </div>
               {(subscription.expire || subscription.updateInterval) && (
@@ -226,16 +289,25 @@ export default function SubscriptionCard({ subscription, isExpanded, onToggle }:
               </button>
               {menuOpen && (
                 <div className="sub-context-menu">
-                  <div className="context-menu-item" onClick={async (e) => {
-                    e.stopPropagation();
-                    setMenuOpen(false);
-                    try {
-                      await removeSubscription(subscription.id);
-                      addNotification('success', t('subscriptionCard.deleteSuccess', { name: subscription.name }), 3);
-                    } catch (error) {
-                      addNotification('error', t('subscriptionCard.deleteError', { name: subscription.name }), 3);
-                    }
-                  }}>
+                  <div 
+                    className="context-menu-item"
+                    onClick={handleOpenEditModal}
+                  >
+                    <span>{t('subscriptionCard.edit')}</span>
+                  </div>
+                  <div 
+                    className="context-menu-item danger" 
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      setMenuOpen(false);
+                      try {
+                        await removeSubscription(subscription.id);
+                        addNotification('success', t('subscriptionCard.deleteSuccess', { name: subscription.name }), 3);
+                      } catch (error) {
+                        addNotification('error', t('subscriptionCard.deleteError', { name: subscription.name }), 3);
+                      }
+                    }}
+                  >
                     <span>{t('subscriptionCard.delete')}</span>
                   </div>
                 </div>
@@ -264,6 +336,49 @@ export default function SubscriptionCard({ subscription, isExpanded, onToggle }:
           </div>
         </div>
       </div>
+
+      {isEditModalOpen && createPortal(
+        <div 
+          className="sub-edit-modal-overlay" 
+          onMouseDown={handleOverlayMouseDown}
+          onMouseUp={handleOverlayMouseUp}
+        >
+          <div className="sub-edit-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="sub-edit-modal-header">
+              <h2>{t('subscriptionCard.editModalTitle')}</h2>
+            </div>
+            <div className="sub-edit-modal-body">
+              <div className="sub-edit-field-group">
+                <label className="sub-edit-label">{t('subscriptionCard.nameLabel')}</label>
+                <input 
+                  type="text" 
+                  className="sub-edit-input" 
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                />
+              </div>
+              <div className="sub-edit-field-group">
+                <label className="sub-edit-label">{t('subscriptionCard.urlLabel')}</label>
+                <input 
+                  type="text" 
+                  className="sub-edit-input" 
+                  value={editUrl}
+                  onChange={(e) => setEditUrl(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="sub-edit-modal-actions">
+              <button className="sub-edit-btn save" onClick={handleSaveEdit}>
+                {t('subscriptionCard.save')}
+              </button>
+              <button className="sub-edit-btn cancel" onClick={() => setIsEditModalOpen(false)}>
+                {t('subscriptionCard.cancel')}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

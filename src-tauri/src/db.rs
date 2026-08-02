@@ -37,6 +37,8 @@ pub struct AppSettings {
     pub auto_update_interval: u32,
     pub split_tunneling_enabled: bool,
     pub split_tunneling_mode: String,
+    pub split_tunneling_apps_mode: String,
+    pub split_tunneling_domains_mode: String,
     pub split_tunneling_apps: Vec<String>,
     pub split_tunneling_domains: Vec<String>,
     pub fragmentation_enabled: bool,
@@ -77,6 +79,8 @@ impl Default for AppSettings {
             auto_update_interval: 3600,
             split_tunneling_enabled: false,
             split_tunneling_mode: "whitelist".to_string(),
+            split_tunneling_apps_mode: "whitelist".to_string(),
+            split_tunneling_domains_mode: "whitelist".to_string(),
             split_tunneling_apps: Vec::new(),
             split_tunneling_domains: Vec::new(),
             fragmentation_enabled: false,
@@ -243,7 +247,13 @@ impl DbState {
                         }
                         "auto_update_interval" => settings.auto_update_interval = value.parse().unwrap_or(3600),
                         "split_tunneling_enabled" => settings.split_tunneling_enabled = value == "true",
-                        "split_tunneling_mode" => settings.split_tunneling_mode = value,
+                        "split_tunneling_mode" => {
+                            settings.split_tunneling_mode = value.clone();
+                            settings.split_tunneling_apps_mode = value.clone();
+                            settings.split_tunneling_domains_mode = value;
+                        }
+                        "split_tunneling_apps_mode" => settings.split_tunneling_apps_mode = value,
+                        "split_tunneling_domains_mode" => settings.split_tunneling_domains_mode = value,
                         "split_tunneling_apps" => {
                             if let Ok(apps) = serde_json::from_str(&value) {
                                 settings.split_tunneling_apps = apps;
@@ -307,6 +317,8 @@ impl DbState {
         stmt.execute(params!["auto_update_interval", settings.auto_update_interval.to_string()])?;
         stmt.execute(params!["split_tunneling_enabled", settings.split_tunneling_enabled.to_string()])?;
         stmt.execute(params!["split_tunneling_mode", &settings.split_tunneling_mode])?;
+        stmt.execute(params!["split_tunneling_apps_mode", &settings.split_tunneling_apps_mode])?;
+        stmt.execute(params!["split_tunneling_domains_mode", &settings.split_tunneling_domains_mode])?;
         stmt.execute(params!["split_tunneling_apps", serde_json::to_string(&settings.split_tunneling_apps).unwrap_or_else(|_| "[]".to_string())])?;
         stmt.execute(params!["split_tunneling_domains", serde_json::to_string(&settings.split_tunneling_domains).unwrap_or_else(|_| "[]".to_string())])?;
         stmt.execute(params!["fragmentation_enabled", settings.fragmentation_enabled.to_string()])?;

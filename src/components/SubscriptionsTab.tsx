@@ -75,24 +75,27 @@ export default function SubscriptionsTab() {
                 <span className="slider round"></span>
               </label>
             </div>
-            {settings.auto_update && (
-              <div className="setting-row sub-setting">
-                <div className="setting-info">
-                  <span className="setting-label">{t('subscriptionsTab.updateIntervalSecs')}</span>
+            <div className={`card-collapsible ${settings.auto_update ? 'expanded' : ''}`}>
+              <div className="card-collapsible-inner">
+                <div className="setting-divider"></div>
+                <div className="setting-row sub-setting">
+                  <div className="setting-info">
+                    <span className="setting-label">{t('subscriptionsTab.updateIntervalSecs')}</span>
+                  </div>
+                  <input
+                    type="number"
+                    className="text-input"
+                    style={{ width: '100px', textAlign: 'right' }}
+                    min={60}
+                    value={settings.auto_update_interval || 3600}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value) || 60;
+                      updateSetting('auto_update_interval', val < 60 ? 60 : val);
+                    }}
+                  />
                 </div>
-                <input
-                  type="number"
-                  className="text-input"
-                  style={{ width: '100px', textAlign: 'right' }}
-                  min={60}
-                  value={settings.auto_update_interval || 3600}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value) || 60;
-                    updateSetting('auto_update_interval', val < 60 ? 60 : val);
-                  }}
-                />
               </div>
-            )}
+            </div>
           </div>
         </div>
 

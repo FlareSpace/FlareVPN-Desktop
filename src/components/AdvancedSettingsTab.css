@@ -15,10 +15,10 @@
   z-index: 10;
   width: 100%;
   padding: 24px;
-  background: linear-gradient(180deg, rgba(18, 18, 18, 0.98) 0%, rgba(18, 18, 18, 0.90) 100%);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--bg-header-glass);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border-header-glass);
 }
 
 .advanced-tab .tab-header h1 {
@@ -51,11 +51,11 @@
 }
 
 .settings-card {
-  background-color: var(--bg-secondary, #1a1a20);
+  background-color: var(--bg-card);
   border-radius: 16px;
   overflow: visible;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--border-color);
   padding: 0 20px;
 }
 
@@ -85,9 +85,41 @@
   font-weight: 400;
 }
 
+.card-collapsible {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: grid-template-rows 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.25s ease-out,
+              visibility 0.35s ease;
+}
+
+.card-collapsible.expanded {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.card-collapsible-inner {
+  overflow: hidden;
+}
+
+.card-collapsible.expanded .card-collapsible-inner {
+  overflow: visible;
+}
+
 .card-expanded-content {
   display: flex;
   flex-direction: column;
+  transform: translateY(-8px);
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-collapsible.expanded .card-expanded-content {
+  transform: translateY(0);
 }
 
 .section-description {
@@ -120,7 +152,7 @@
   right: 0;
   bottom: 0;
   background-color: rgba(255, 255, 255, 0.12);
-  transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .slider:before {
@@ -131,11 +163,13 @@
   left: 2px;
   bottom: 2px;
   background-color: #fff;
-  transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 input:checked + .slider {
   background-color: var(--accent-color, #3b82f6);
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
 }
 
 input:checked + .slider:before {
@@ -162,7 +196,7 @@ input:checked + .slider:before {
   background: transparent;
   border: none;
   padding: 4px 0;
-  color: #60a5fa;
+  color: var(--accent-color, #60a5fa);
   font-size: 15px;
   font-weight: 500;
   cursor: pointer;
@@ -175,7 +209,7 @@ input:checked + .slider:before {
 
 .dropdown-arrow {
   transition: transform 0.2s ease;
-  color: #60a5fa;
+  color: var(--accent-color, #60a5fa);
 }
 
 .dropdown-arrow.open {
@@ -188,18 +222,19 @@ input:checked + .slider:before {
   top: calc(100% + 6px);
   right: 0;
   min-width: 170px;
-  background: rgba(26, 26, 32, 0.95);
+  background: var(--context-menu-bg, rgba(26, 26, 32, 0.95));
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--context-menu-border, rgba(255, 255, 255, 0.12));
   border-radius: 16px;
   padding: 6px;
   display: flex;
   flex-direction: column;
   gap: 4px;
   z-index: 1050;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.65);
-  animation: fadeIn 0.15s ease-out;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.25);
+  transform-origin: top right;
+  animation: contextMenuPop 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .context-menu-item {
@@ -216,12 +251,12 @@ input:checked + .slider:before {
 }
 
 .context-menu-item:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--context-menu-hover, rgba(255, 255, 255, 0.08));
 }
 
 .context-menu-item.active {
-  color: #60a5fa;
-  background: rgba(59, 130, 246, 0.15);
+  color: var(--accent-color, #60a5fa);
+  background: color-mix(in srgb, var(--accent-color, #3b82f6) 15%, transparent);
   font-weight: 600;
 }
 
@@ -231,7 +266,7 @@ input:checked + .slider:before {
   background: transparent;
   border: none;
   outline: none;
-  color: #60a5fa;
+  color: var(--accent-color, #60a5fa);
   font-size: 15px;
   font-weight: 500;
   text-align: right;
@@ -248,7 +283,7 @@ input:checked + .slider:before {
 
 .number-input-styled:focus,
 .text-input-styled:focus {
-  border-bottom: 1px solid #60a5fa;
+  border-bottom: 1px solid var(--accent-color, #60a5fa);
 }
 
 
@@ -271,16 +306,16 @@ input:checked + .slider:before {
 }
 
 .mtu-badge.active {
-  background: rgba(59, 130, 246, 0.2);
-  color: #60a5fa;
-  border-color: rgba(59, 130, 246, 0.4);
+  background: color-mix(in srgb, var(--accent-color, #3b82f6) 20%, transparent);
+  color: var(--accent-color, #60a5fa);
+  border-color: color-mix(in srgb, var(--accent-color, #3b82f6) 40%, transparent);
 }
 
 .capitalize {
   text-transform: capitalize;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: translateY(0); }
+@keyframes contextMenuPop {
+  from { opacity: 0; transform: translateY(-6px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }

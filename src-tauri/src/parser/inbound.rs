@@ -3,7 +3,7 @@ use serde_json::{json, Map, Value};
 pub fn create_tun_inbound(xray: &Value) -> Value {
     let mut mtu = 1500;
     let mut stack = "mixed".to_string();
-    let mut ipv4_addr = "172.19.0.1/30".to_string();
+    let mut ipv4_addr = "198.18.0.1/30".to_string();
     let mut ipv6_addr = String::new();
 
     if let Some(inbounds) = xray.get("inbounds").and_then(|i| i.as_array()) {
@@ -52,6 +52,7 @@ pub fn create_tun_inbound(xray: &Value) -> Value {
     let mut tun_inbound = Map::new();
     tun_inbound.insert("type".to_string(), json!("tun"));
     tun_inbound.insert("tag".to_string(), json!("tun-in"));
+    tun_inbound.insert("interface_name".to_string(), json!("FlareVPN-TUN"));
     
     let mut addresses = vec![json!(ipv4_addr)];
     if !ipv6_addr.is_empty() {
