@@ -1,0 +1,117 @@
+.top-mode-menu-container {
+  position: relative;
+  display: inline-block;
+}
+
+.top-mode-trigger-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--card-bg, rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+  color: var(--text-primary, #ffffff);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.top-mode-trigger-btn:hover,
+.top-mode-trigger-btn.active {
+  background: var(--card-hover, rgba(255, 255, 255, 0.15));
+  border-color: var(--accent-color, #5B8CFF);
+}
+
+.top-mode-trigger-btn .arrow-icon {
+  transition: transform 0.2s ease;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+}
+
+.top-mode-trigger-btn .arrow-icon.open {
+  transform: rotate(180deg);
+}
+
+.top-mode-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 140px;
+  background: var(--bg-secondary, #1e1e24);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  padding: 6px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  backdrop-filter: blur(12px);
+  animation: modeDropdownFadeIn 0.15s ease-out;
+}
+
+@keyframes modeDropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.top-mode-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--text-primary, #ffffff);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  user-select: none;
+}
+
+.top-mode-item:hover {
+  background: var(--card-hover, rgba(255, 255, 255, 0.1));
+}
+
+.top-mode-item.selected {
+  color: var(--accent-color, #5B8CFF);
+  font-weight: 500;
+}
+
+.top-mode-item.sub-item {
+  padding-left: 16px;
+}
+
+.top-mode-header-label {
+  padding: 6px 10px 4px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.5));
+  user-select: none;
+  pointer-events: none;
+}
+
+.top-mode-item .check-icon {
+  color: var(--accent-color, #5B8CFF);
+}
+
+
+.checkbox-box.checked {
+  background: var(--accent-color, #5B8CFF);
+  border-color: var(--accent-color, #5B8CFF);
+}
+
+.checkbox-box .check-icon {
+  color: #ffffff;
+  flex-shrink: 0;
+  margin-left: 0;
+}

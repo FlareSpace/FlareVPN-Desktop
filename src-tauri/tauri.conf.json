@@ -43,7 +43,8 @@
           "libgtk-3-0",
           "curl",
           "wget",
-          "libcap2-bin"
+          "libcap2-bin",
+          "libayatana-appindicator3-1"
         ],
         "postInstallScript": "linux-scripts/postinst.sh"
       },

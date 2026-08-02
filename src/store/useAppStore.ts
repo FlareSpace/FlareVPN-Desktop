@@ -108,6 +108,8 @@ interface AppState {
   customColorEnabled: boolean;
   customAccentColor: string;
   vpnMode: 'TUN' | 'Proxy';
+  tunEnabled: boolean;
+  proxyEnabled: boolean;
   loadSettings: () => Promise<void>;
   updateSetting: <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => Promise<void>;
   setLanguage: (lang: LanguageType) => void;
@@ -131,6 +133,8 @@ interface AppState {
   setPingDisplayStyle: (style: PingDisplayStyle) => void;
   setPingTimeout: (timeout: number) => void;
   setVpnMode: (mode: 'TUN' | 'Proxy') => void;
+  setTunEnabled: (enabled: boolean) => void;
+  setProxyEnabled: (enabled: boolean) => void;
   startPing: (profileIds: string[]) => void;
   updateSubscription: (id: string) => Promise<void>;
   updateSubscriptionDetails: (id: string, name: string, urlOrBase64: string) => Promise<void>;
@@ -155,6 +159,8 @@ export const useAppStore = create<AppState>()(
       pingResults: {},
       pingedProfileIds: new Set<string>(),
       vpnMode: 'TUN',
+      tunEnabled: true,
+      proxyEnabled: false,
       language: 'auto',
       themeStyle: 'auto',
       customColorEnabled: false,
@@ -264,6 +270,10 @@ export const useAppStore = create<AppState>()(
         const state = get();
         const current = state.status;
         if (current === 'disconnected') {
+          if (!state.tunEnabled && !state.proxyEnabled) {
+            get().addNotification('error', i18n.t('notifications.selectModeFirst'));
+            return;
+          }
           const mainProfile = state.subscriptions.flatMap(s => s.profiles).find(p => p.id === state.selectedProfileId);
           if (!mainProfile) {
             get().addNotification('error', i18n.t('notifications.selectProfileFirst'));
@@ -361,34 +371,35 @@ export const useAppStore = create<AppState>()(
             if (!parsedConfig.route) parsedConfig.route = { rules: [] };
             parsedConfig.route.final = primaryProxyTag;
 
-            if (state.vpnMode === 'Proxy') {
-              parsedConfig.inbounds = [
-                {
-                  type: 'mixed',
-                  tag: 'mixed-in',
-                  listen: '127.0.0.1',
-                  listen_port: state.settings.proxy_port || 2080
-                }
-              ];
-            } else {
-              parsedConfig.inbounds = [
-                {
-                  type: 'tun',
-                  tag: 'tun-in',
-                  interface_name: 'FlareVPN-TUN',
-                  address: ['198.18.0.1/30'],
-                  mtu: state.settings.mtu_value || 1500,
-                  auto_route: true,
-                  strict_route: true,
-                  stack: state.settings.network_stack || 'mixed',
-                  route_exclude_address: [
-                    "192.168.0.0/16",
-                    "10.0.0.0/8",
-                    "172.16.0.0/12"
-                  ]
-                }
-              ];
+            const inbounds: any[] = [];
+            if (state.proxyEnabled) {
+              inbounds.push({
+                type: 'mixed',
+                tag: 'mixed-in',
+                listen: '127.0.0.1',
+                listen_port: state.settings.proxy_port || 2080
+              });
+            }
+            if (state.tunEnabled) {
+              inbounds.push({
+                type: 'tun',
+                tag: 'tun-in',
+                interface_name: 'FlareVPN-TUN',
+                address: ['198.18.0.1/30'],
+                mtu: state.settings.mtu_value || 1500,
+                auto_route: true,
+                strict_route: true,
+                stack: state.settings.network_stack || 'mixed',
+                route_exclude_address: [
+                  "192.168.0.0/16",
+                  "10.0.0.0/8",
+                  "172.16.0.0/12"
+                ]
+              });
+            }
+            parsedConfig.inbounds = inbounds;
 
+            if (state.tunEnabled) {
               if (!parsedConfig.route.rules) parsedConfig.route.rules = [];
               parsedConfig.route.auto_detect_interface = true;
               parsedConfig.route.default_domain_resolver = "dns-direct";
@@ -545,6 +556,21 @@ export const useAppStore = create<AppState>()(
 
             const cleanConfigJson = JSON.stringify(parsedConfig);
             await invoke('start_tunnel', { configJson: cleanConfigJson });
+
+            const timeoutId = setTimeout(async () => {
+              if (get().status === 'connecting') {
+                try { await invoke('stop_tunnel'); } catch {}
+                set({ status: 'disconnected' });
+                get().addNotification('error', i18n.t('notifications.connectionTimeout'));
+              }
+            }, 8000);
+
+            const unsub = useAppStore.subscribe((state) => {
+              if (state.status !== 'connecting') {
+                clearTimeout(timeoutId);
+                unsub();
+              }
+            });
           } catch (e: any) {
             set({ status: 'disconnected' });
             if (e === 'admin_required') {
@@ -598,11 +624,30 @@ export const useAppStore = create<AppState>()(
         const state = get();
         if (state.vpnMode === mode) return;
 
-
         const wasConnected = state.status === 'connected' || state.status === 'connecting';
+        const tun = mode === 'TUN';
+        const proxy = mode === 'Proxy';
 
-        set({ vpnMode: mode });
+        set({ vpnMode: mode, tunEnabled: tun, proxyEnabled: proxy });
 
+        if (wasConnected) {
+          get().reconnectVpn();
+        }
+      },
+      setTunEnabled: (enabled: boolean) => {
+        const state = get();
+        if (state.tunEnabled === enabled) return;
+        const wasConnected = state.status === 'connected' || state.status === 'connecting';
+        set({ tunEnabled: enabled });
+        if (wasConnected) {
+          get().reconnectVpn();
+        }
+      },
+      setProxyEnabled: (enabled: boolean) => {
+        const state = get();
+        if (state.proxyEnabled === enabled) return;
+        const wasConnected = state.status === 'connected' || state.status === 'connecting';
+        set({ proxyEnabled: enabled });
         if (wasConnected) {
           get().reconnectVpn();
         }
@@ -921,6 +966,18 @@ export const useAppStore = create<AppState>()(
         customColorEnabled: state.customColorEnabled,
         customAccentColor: state.customAccentColor,
         settings: state.settings,
+        tunEnabled: state.tunEnabled,
+        proxyEnabled: state.proxyEnabled,
+      }),
+      merge: (persistedState: any, currentState) => ({
+        ...currentState,
+        ...persistedState,
+        tunEnabled: persistedState?.tunEnabled !== undefined 
+          ? Boolean(persistedState.tunEnabled) 
+          : (persistedState?.vpnMode === 'Proxy' ? false : true),
+        proxyEnabled: persistedState?.proxyEnabled !== undefined 
+          ? Boolean(persistedState.proxyEnabled) 
+          : (persistedState?.vpnMode === 'Proxy' ? true : false),
       }),
     }
   )

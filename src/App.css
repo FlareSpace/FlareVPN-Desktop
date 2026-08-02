@@ -70,6 +70,7 @@
   display: flex;
   justify-content: flex-end;
   align-items: center;
+  gap: 12px;
   padding: 16px 24px 4px 24px;
   flex-shrink: 0;
   z-index: 10;
@@ -135,5 +136,12 @@
   align-items: center;
   justify-content: center;
   position: relative;
+}
+
+.connection-panel-top {
+  position: absolute;
+  top: 16px;
+  right: 24px;
+  z-index: 10;
 }
 

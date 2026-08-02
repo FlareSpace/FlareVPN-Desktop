@@ -15,6 +15,7 @@ import BasicSettingsTab from './components/BasicSettingsTab';
 import AdvancedSettingsTab from './components/AdvancedSettingsTab';
 import PersonalizationTab from './components/PersonalizationTab';
 import ModeSelection from './components/ModeSelection';
+import TopModeMenu from './components/TopModeMenu';
 import { useTranslation } from 'react-i18next';
 import { useAppStore } from './store/useAppStore';
 import { useAutoUpdater } from './utils/useAutoUpdater';
@@ -212,6 +213,9 @@ function App() {
               </div>
             </div>
             <div className="connection-panel">
+              <div className="connection-panel-top">
+                <TopModeMenu />
+              </div>
               <MainToggle />
               <ModeSelection />
             </div>

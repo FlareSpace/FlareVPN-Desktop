@@ -91,7 +91,7 @@
   color: var(--accent-color, #3B82F6);
 }
 
-.check-icon {
+.ping-type-card .check-icon {
   position: absolute;
   top: 12px;
   right: 12px;

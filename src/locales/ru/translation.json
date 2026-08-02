@@ -136,7 +136,16 @@
     "tunnelError": "Ошибка туннеля: {{error}}",
     "subscriptionNotFound": "Подписка не найдена",
     "onlyHttpSubscriptions": "Обновить можно только HTTP(S) подписки",
-    "adminRequired": "Нет прав администратора (Запустите от имени Администратора)"
+    "adminRequired": "Нет прав администратора (Запустите от имени Администратора)",
+    "selectModeFirst": "Выберите хотя бы один режим подключения",
+    "connectionTimeout": "Время подключения истекло"
+  },
+  "mode": {
+    "proxy": "Прокси",
+    "tun": "TUN",
+    "singbox": "sing-box",
+    "mixed": "Смешанный",
+    "none": "-"
   },
   "advancedTab": {
     "title": "Расширенные",
@@ -185,6 +194,7 @@
   },
   "home": {
     "collapseAll": "Свернуть все",
-    "noProfiles": "Пока что нет добавленных профилей!"
+    "noProfiles": "Пока что нет добавленных профилей!",
+    "testPing": "Тестировать"
   }
 }

@@ -136,7 +136,16 @@
     "tunnelError": "Tunnel Error: {{error}}",
     "subscriptionNotFound": "Subscription not found",
     "onlyHttpSubscriptions": "Only HTTP(S) subscriptions can be updated",
-    "adminRequired": "Administrator rights required (Run as Administrator)"
+    "adminRequired": "Administrator rights required (Run as Administrator)",
+    "selectModeFirst": "Please select at least one connection mode",
+    "connectionTimeout": "Connection timed out"
+  },
+  "mode": {
+    "proxy": "Proxy",
+    "tun": "TUN",
+    "singbox": "sing-box",
+    "mixed": "Mixed",
+    "none": "-"
   },
   "advancedTab": {
     "title": "Advanced",
@@ -185,6 +194,7 @@
   },
   "home": {
     "collapseAll": "Collapse all",
-    "noProfiles": "No profiles added yet!"
+    "noProfiles": "No profiles added yet!",
+    "testPing": "Test"
   }
 }
