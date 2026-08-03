@@ -180,12 +180,12 @@ async fn ping_profile_direct(
 pub fn run() {
     #[cfg(target_os = "linux")]
     {
-        // Fix for WebKitGTK 2.42+ surfaceless EGL display allocation failure (EGL_BAD_ALLOC)
+        // Fix for WebKitGTK 2.42+ surfaceless EGL display allocation failure (EGL_BAD_ALLOC) and AppImage sandbox
         if std::env::var("WEBKIT_DISABLE_DMABUF_RENDERER").is_err() {
             std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
         }
-        if std::env::var("WEBKIT_DISABLE_COMPOSITING_MODE").is_err() {
-            std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
+        if std::env::var("WEBKIT_FORCE_SANDBOX").is_err() {
+            std::env::set_var("WEBKIT_FORCE_SANDBOX", "0");
         }
     }
 

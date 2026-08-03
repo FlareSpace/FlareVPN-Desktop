@@ -1,6 +1,6 @@
 [package]
 name = "flarevpn"
-version = "0.1.2"
+version = "0.1.3"
 description = "A Flare VPN"
 authors = ["FlareSpace"]
 edition = "2021"
