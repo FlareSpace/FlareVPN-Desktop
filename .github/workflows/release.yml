@@ -64,7 +64,10 @@ jobs:
         with:
           tagName: v__VERSION__
           releaseName: 'Flare VPN v__VERSION__'
-          releaseBody: '• Auto-release'
-          releaseDraft: true
+          releaseBody: |
+            # Flare VPN v__VERSION__
+
+            - Fixes and improves
+          releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
