@@ -2,19 +2,18 @@
 set -e
 
 
+for file in /usr/bin/sing-box* /usr/bin/flarevpn* /usr/lib/flare*/sing-box* /usr/lib/com.flare.vpn/sing-box*; do
+    if [ -f "$file" ]; then
+        chmod +x "$file" || true
+    fi
+done
 
 
-
-
-for file in /usr/lib/flarevpn/sing-box*; do
+for file in /usr/bin/sing-box* /usr/bin/flarevpn* /usr/lib/flare*/sing-box* /usr/lib/com.flare.vpn/sing-box*; do
     if [ -f "$file" ]; then
         setcap 'cap_net_admin,cap_net_raw+ep' "$file" || true
     fi
 done
 
-
-if [ -f "/usr/bin/flarevpn" ]; then
-    setcap 'cap_net_admin,cap_net_raw+ep' "/usr/bin/flarevpn" || true
-fi
-
 exit 0
+

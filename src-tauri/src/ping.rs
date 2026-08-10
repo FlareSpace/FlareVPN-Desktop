@@ -405,6 +405,9 @@ pub async fn ping_via_proxy(
         .map_err(|e| e.to_string())?;
     let temp_path = ping_config_path.to_string_lossy().to_string();
 
+    #[cfg(target_os = "linux")]
+    crate::tunnel::ensure_sidecar_executable_linux();
+
     let (mut rx, child) = app.shell().sidecar("sing-box")
         .map_err(|e| format!("Sidecar err: {}", e))?
         .args(["run", "-c", &temp_path])

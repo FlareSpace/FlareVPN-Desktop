@@ -120,6 +120,26 @@ async fn stop_child_process_gracefully(child: CommandChild) {
     let _ = child.kill();
 }
 
+#[cfg(target_os = "linux")]
+pub fn ensure_sidecar_executable_linux() {
+    use std::os::unix::fs::PermissionsExt;
+    let candidate_paths = [
+        "/usr/bin/sing-box",
+        "/usr/bin/sing-box-x86_64-unknown-linux-gnu",
+        "/usr/lib/flare-vpn/sing-box",
+        "/usr/lib/com.flare.vpn/sing-box",
+    ];
+    for path in &candidate_paths {
+        if let Ok(metadata) = std::fs::metadata(path) {
+            let mut perm = metadata.permissions();
+            if perm.mode() & 0o111 == 0 {
+                perm.set_mode(0o755);
+                let _ = std::fs::set_permissions(path, perm);
+            }
+        }
+    }
+}
+
 #[tauri::command]
 pub async fn start_tunnel(app: AppHandle, config_json: String) -> Result<(), String> {
 
@@ -171,6 +191,9 @@ pub async fn start_tunnel(app: AppHandle, config_json: String) -> Result<(), Str
         let mut path_guard = state.current_config_path.lock().await;
         *path_guard = Some(config_path.clone());
     }
+
+    #[cfg(target_os = "linux")]
+    ensure_sidecar_executable_linux();
 
     let sidecar_command = app
         .shell()
