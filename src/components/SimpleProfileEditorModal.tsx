@@ -896,7 +896,7 @@ export default function SimpleProfileEditorModal({ profile, onClose }: Props) {
                           fingerprint,
                           [
                             'chrome', 'firefox', 'safari', 'edge',
-                            'ios', 'android', 'random', 'randomized'
+                            'ios', 'android', 'qq', 'random', 'randomized'
                           ].map(f => ({ value: f, label: f })),
                           setFingerprint
                         )}

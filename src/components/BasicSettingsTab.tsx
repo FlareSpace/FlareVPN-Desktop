@@ -5,11 +5,81 @@ import { useAppStore } from '../store/useAppStore';
 import { ChevronRight, Check, Search, RefreshCw, Loader2, AppWindow, ArrowLeft, Plus } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import './BasicSettingsTab.css';
-import { InfoFilled, CloseFilled } from './icons';
+import { CloseFilled } from './icons';
 
 interface ProcessItem {
   name: string;
   path?: string;
+}
+
+function AnimatedModalTitle({ text }: { text: string }) {
+  const [items, setItems] = useState<{ id: number; text: string }[]>(() => [
+    { id: Date.now(), text }
+  ]);
+
+  useEffect(() => {
+    setItems((prev) => {
+      const lastText = prev[prev.length - 1]?.text;
+      if (lastText === text) return prev;
+      return [...prev, { id: Date.now(), text }];
+    });
+  }, [text]);
+
+  return (
+    <div className="modal-header-title-container">
+      {items.map((item, index) => {
+        const isLast = index === items.length - 1;
+        return (
+          <span
+            key={item.id}
+            className={`modal-header-title-text ${isLast ? 'slide-in' : 'slide-out'}`}
+            onAnimationEnd={() => {
+              if (!isLast) {
+                setItems((current) => current.filter((i) => i.id !== item.id));
+              }
+            }}
+          >
+            {item.text}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+function AnimatedCrossfadeText({ text }: { text: string }) {
+  const [items, setItems] = useState<{ id: number; text: string }[]>(() => [
+    { id: Date.now(), text }
+  ]);
+
+  useEffect(() => {
+    setItems((prev) => {
+      const lastText = prev[prev.length - 1]?.text;
+      if (lastText === text) return prev;
+      return [...prev, { id: Date.now(), text }];
+    });
+  }, [text]);
+
+  return (
+    <div className="crossfade-text-container">
+      {items.map((item, index) => {
+        const isLast = index === items.length - 1;
+        return (
+          <span
+            key={item.id}
+            className={`crossfade-text-item ${isLast ? 'fade-in' : 'fade-out'}`}
+            onAnimationEnd={() => {
+              if (!isLast) {
+                setItems((current) => current.filter((i) => i.id !== item.id));
+              }
+            }}
+          >
+            {item.text}
+          </span>
+        );
+      })}
+    </div>
+  );
 }
 
 export default function BasicSettingsTab() {
@@ -33,7 +103,6 @@ export default function BasicSettingsTab() {
     'whitelist'
   );
   const [inputValue, setInputValue] = useState('');
-
 
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [runningProcesses, setRunningProcesses] = useState<ProcessItem[]>([]);
@@ -103,11 +172,11 @@ export default function BasicSettingsTab() {
   };
 
   const handleSaveModal = () => {
-    updateSetting('split_tunneling_apps', localApps);
-    updateSetting('split_tunneling_domains', localDomains);
+    updateSetting('split_tunneling_mode', localAppsMode);
     updateSetting('split_tunneling_apps_mode', localAppsMode);
     updateSetting('split_tunneling_domains_mode', localDomainsMode);
-    updateSetting('split_tunneling_mode', localAppsMode);
+    updateSetting('split_tunneling_apps', localApps);
+    updateSetting('split_tunneling_domains', localDomains);
     setIsModalOpen(false);
   };
 
@@ -223,12 +292,13 @@ export default function BasicSettingsTab() {
         >
           <div className="modal-content blurred-modal">
             <div className="modal-header">
-              <h2>
-                {isPickerOpen 
-                  ? t('basicTab.selectProcess') 
-                  : (activeTab === 'apps' ? t('basicTab.apps') : t('basicTab.domains'))
-                }
-              </h2>
+              <AnimatedModalTitle 
+                text={
+                  isPickerOpen 
+                    ? t('basicTab.selectProcess') 
+                    : (activeTab === 'apps' ? t('basicTab.apps') : t('basicTab.domains'))
+                } 
+              />
               {!isPickerOpen && (
                 <div className="modal-tabs">
                   <button 
@@ -255,167 +325,168 @@ export default function BasicSettingsTab() {
             </div>
 
             <div className="modal-body">
-              {activeTab === 'apps' && (
-                <>
-                  {isPickerOpen ? (
-                    <div className="process-picker-container">
-                      <div className="picker-search-bar">
-                        <button className="picker-back-btn" onClick={() => setIsPickerOpen(false)}>
-                          <ArrowLeft size={16} />
-                        </button>
-                        <div className="search-input-wrapper">
-                          <Search size={15} className="search-icon" />
-                          <input
-                            type="text"
-                            placeholder={t('basicTab.searchProcessPlaceholder')}
-                            value={processSearch}
-                            onChange={(e) => setProcessSearch(e.target.value)}
-                            autoFocus
-                          />
-                        </div>
-                        <button 
-                          className="refresh-btn" 
-                          onClick={fetchRunningProcesses} 
-                          title={t('basicTab.refreshProcesses')}
-                          disabled={isLoadingProcesses}
-                        >
-                          <RefreshCw size={15} className={isLoadingProcesses ? 'spinning' : ''} />
-                        </button>
-                      </div>
-
-                      <div className="process-list">
-                        {isLoadingProcesses ? (
-                          <div className="process-loading">
-                            <Loader2 className="spinning" size={24} />
-                            <span>{t('basicTab.loadingProcesses')}</span>
-                          </div>
-                        ) : filteredProcesses.length === 0 ? (
-                          <div className="process-empty">
-                            <span>{t('basicTab.noProcessesFound')}</span>
-                          </div>
-                        ) : (
-                          filteredProcesses.map((proc) => {
-                            const isAdded = localApps.some(a => a.toLowerCase() === proc.name.toLowerCase());
-                            return (
-                              <div
-                                key={proc.name}
-                                className={`process-row ${isAdded ? 'added' : ''}`}
-                                onClick={() => {
-                                  if (isAdded) {
-                                    handleRemoveApp(proc.name);
-                                  } else {
-                                    setLocalApps([...localApps, proc.name]);
-                                  }
-                                }}
-                              >
-                                <div className="process-info">
-                                  <AppWindow size={16} className="process-icon" />
-                                  <span className="process-name">{proc.name}</span>
-                                </div>
-                                {isAdded ? (
-                                  <span className="process-added-tag">
-                                    <Check size={14} /> {t('basicTab.alreadyAdded')}
-                                  </span>
-                                ) : (
-                                  <button className="process-add-action">
-                                    <Plus size={16} />
-                                  </button>
-                                )}
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
-
-                      <div className="picker-footer">
-                        {!showManualInput ? (
-                          <button className="manual-toggle-btn" onClick={() => setShowManualInput(true)}>
-                            {t('basicTab.addManual')}
+              <div key={isPickerOpen ? 'picker' : activeTab} className="modal-tab-fade-container">
+                {activeTab === 'apps' && (
+                  <>
+                    {isPickerOpen ? (
+                      <div className="process-picker-container">
+                        <div className="picker-search-bar">
+                          <button className="picker-back-btn" onClick={() => setIsPickerOpen(false)}>
+                            <ArrowLeft size={16} />
                           </button>
-                        ) : (
-                          <div className="apps-input-wrapper manual-input-wrapper">
+                          <div className="search-input-wrapper">
+                            <Search size={15} className="search-icon" />
+                            <input
+                              type="text"
+                              placeholder={t('basicTab.searchProcessPlaceholder')}
+                              value={processSearch}
+                              onChange={(e) => setProcessSearch(e.target.value)}
+                              autoFocus
+                            />
+                          </div>
+                          <button 
+                            className="refresh-btn" 
+                            onClick={fetchRunningProcesses} 
+                            title={t('basicTab.refreshProcesses')}
+                            disabled={isLoadingProcesses}
+                          >
+                            <RefreshCw size={15} className={isLoadingProcesses ? 'spinning' : ''} />
+                          </button>
+                        </div>
+
+                        <div className="process-list">
+                          {isLoadingProcesses ? (
+                            <div className="process-loading">
+                              <Loader2 className="spinning" size={24} />
+                              <span>{t('basicTab.loadingProcesses')}</span>
+                            </div>
+                          ) : filteredProcesses.length === 0 ? (
+                            <div className="process-empty">
+                              <span>{t('basicTab.noProcessesFound')}</span>
+                            </div>
+                          ) : (
+                            filteredProcesses.map((proc) => {
+                              const isAdded = localApps.some(a => a.toLowerCase() === proc.name.toLowerCase());
+                              return (
+                                <div
+                                  key={proc.name}
+                                  className={`process-row ${isAdded ? 'added' : ''}`}
+                                  onClick={() => {
+                                    if (isAdded) {
+                                      handleRemoveApp(proc.name);
+                                    } else {
+                                      setLocalApps([...localApps, proc.name]);
+                                    }
+                                  }}
+                                >
+                                  <div className="process-info">
+                                    <AppWindow size={16} className="process-icon" />
+                                    <span className="process-name">{proc.name}</span>
+                                  </div>
+                                  {isAdded ? (
+                                    <span className="process-added-tag">
+                                      <Check size={14} /> {t('basicTab.alreadyAdded')}
+                                    </span>
+                                  ) : (
+                                    <button className="process-add-action">
+                                      <Plus size={16} />
+                                    </button>
+                                  )}
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+
+                        <div className="picker-footer">
+                          {!showManualInput ? (
+                            <button className="manual-toggle-btn" onClick={() => setShowManualInput(true)}>
+                              {t('basicTab.addManual')}
+                            </button>
+                          ) : (
+                            <div className="apps-input-wrapper manual-input-wrapper">
+                              <input 
+                                type="text" 
+                                placeholder={t('basicTab.addAppPlaceholder')}
+                                value={inputValue}
+                                onChange={(e) => setInputValue(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                autoFocus
+                              />
+                              <button onClick={() => { handleAddApp(); setInputValue(''); }} className="add-app-btn">+</button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="apps-list-container">
+                        <div className="apps-header-action">
+                          <button className="open-picker-btn" onClick={handleOpenPicker}>
+                            <Plus size={18} />
+                            <span>{t('basicTab.selectFromRunning')}</span>
+                          </button>
+                        </div>
+
+                        <div className="apps-list">
+                          {localApps.map((app, index) => (
+                            <div key={index} className="app-item">
+                              <div className="app-item-info">
+                                <AppWindow size={16} className="app-item-icon" />
+                                <span>{app}</span>
+                              </div>
+                              <button onClick={() => handleRemoveApp(app)}>
+                                <CloseFilled size={16} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="manual-input-footer">
+                          <div className="apps-input-wrapper">
                             <input 
                               type="text" 
                               placeholder={t('basicTab.addAppPlaceholder')}
                               value={inputValue}
                               onChange={(e) => setInputValue(e.target.value)}
                               onKeyDown={handleKeyDown}
-                              autoFocus
                             />
-                            <button onClick={() => { handleAddApp(); setInputValue(''); }} className="add-app-btn">+</button>
+                            <button onClick={handleAddApp} className="add-app-btn">+</button>
                           </div>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="apps-list-container">
-                      <div className="apps-header-action">
-                        <button className="open-picker-btn" onClick={handleOpenPicker}>
-                          <Plus size={18} />
-                          <span>{t('basicTab.selectFromRunning')}</span>
-                        </button>
-                      </div>
-
-                      <div className="apps-list">
-                        {localApps.map((app, index) => (
-                          <div key={index} className="app-item">
-                            <div className="app-item-info">
-                              <AppWindow size={16} className="app-item-icon" />
-                              <span>{app}</span>
-                            </div>
-                            <button onClick={() => handleRemoveApp(app)}>
-                              <CloseFilled size={16} />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="manual-input-footer">
-                        <div className="apps-input-wrapper">
-                          <input 
-                            type="text" 
-                            placeholder={t('basicTab.addAppPlaceholder')}
-                            value={inputValue}
-                            onChange={(e) => setInputValue(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                          />
-                          <button onClick={handleAddApp} className="add-app-btn">+</button>
                         </div>
                       </div>
-                    </div>
-                  )}
-                </>
-              )}
+                    )}
+                  </>
+                )}
 
-              {activeTab === 'domains' && (
-                <div className="apps-list-container">
-                  <div className="apps-input-wrapper">
-                    <input 
-                      type="text" 
-                      placeholder="e.g. google.com"
-                      value={inputValue}
-                      onChange={(e) => setInputValue(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                    />
-                    <button onClick={handleAddDomain} className="add-app-btn">+</button>
+                {activeTab === 'domains' && (
+                  <div className="apps-list-container">
+                    <div className="apps-input-wrapper">
+                      <input 
+                        type="text" 
+                        placeholder="e.g. google.com or 1.1.1.1"
+                        value={inputValue}
+                        onChange={(e) => setInputValue(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                      />
+                      <button onClick={handleAddDomain} className="add-app-btn">+</button>
+                    </div>
+                    <div className="apps-list">
+                      {localDomains.map((domain, index) => (
+                        <div key={index} className="app-item">
+                          <span>{domain}</span>
+                          <button onClick={() => handleRemoveDomain(domain)}><CloseFilled size={16} /></button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="apps-list">
-                    {localDomains.map((domain, index) => (
-                      <div key={index} className="app-item">
-                        <span>{domain}</span>
-                        <button onClick={() => handleRemoveDomain(domain)}><CloseFilled size={16} /></button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
             <div className="modal-controls">
               <div className="control-row">
                 <span className="control-label">
-                  {t(activeTab === 'apps' ? 'basicTab.appsMode' : 'basicTab.domainsMode')} 
-                  <InfoFilled size={14} className="info-icon" />
+                  <AnimatedCrossfadeText text={t('basicTab.mode')} />
                 </span>
                 <div className="custom-dropdown-container" ref={splitModeMenuRef}>
                   {(() => {

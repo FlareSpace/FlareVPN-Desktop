@@ -31,7 +31,7 @@ export default function TopModeMenu() {
   const getButtonText = () => {
     if (tunEnabled && proxyEnabled) return t('mode.mixed');
     if (proxyEnabled) return t('mode.proxy');
-    if (tunEnabled) return 'TUN';
+    if (tunEnabled) return t('mode.tun');
     return t('mode.none');
   };
 
@@ -48,7 +48,7 @@ export default function TopModeMenu() {
       {isOpen && (
         <div className="top-mode-dropdown">
           <div className="top-mode-header-label">
-            Режим
+            {t('mode.label')}
           </div>
 
           <div
@@ -63,7 +63,7 @@ export default function TopModeMenu() {
             className={`top-mode-item ${tunEnabled ? 'selected' : ''}`}
             onClick={() => setTunEnabled(!tunEnabled)}
           >
-            <span>TUN</span>
+            <span>{t('mode.tun')}</span>
             {tunEnabled && <Check size={16} className="check-icon" />}
           </div>
         </div>

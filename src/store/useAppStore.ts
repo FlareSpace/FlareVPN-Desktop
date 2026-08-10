@@ -75,6 +75,7 @@ export interface AppSettings {
   tls_spoof_method: string;
   tls_fingerprint: string;
   remote_dns: string;
+  custom_remote_dns: string;
   remote_dns_doh: boolean;
   remote_dns_strictly_tun: boolean;
   fake_ip_enabled: boolean;
@@ -201,6 +202,7 @@ export const useAppStore = create<AppState>()(
         tls_spoof_method: 'wrong-ack',
         tls_fingerprint: 'auto',
         remote_dns: 'auto',
+        custom_remote_dns: '',
         remote_dns_doh: true,
         remote_dns_strictly_tun: false,
         fake_ip_enabled: false,
@@ -445,31 +447,140 @@ export const useAppStore = create<AppState>()(
             }
             parsedConfig.inbounds = inbounds;
 
+            if (!parsedConfig.route) parsedConfig.route = { rules: [] };
+            if (!Array.isArray(parsedConfig.route.rules)) parsedConfig.route.rules = [];
+            const initialProfileRules = [...parsedConfig.route.rules];
+
+            const systemServiceRules: any[] = [];
             if (state.tunEnabled) {
-              if (!parsedConfig.route.rules) parsedConfig.route.rules = [];
               parsedConfig.route.auto_detect_interface = true;
               parsedConfig.route.default_domain_resolver = "dns-direct";
 
+              systemServiceRules.push({
+                protocol: "dns",
+                action: "hijack-dns"
+              });
+              systemServiceRules.push({
+                action: "sniff"
+              });
+              systemServiceRules.push({
+                ip_is_private: true,
+                outbound: "direct"
+              });
               if (proxyServerDomains.length > 0) {
-                parsedConfig.route.rules.unshift({
+                systemServiceRules.push({
                   domain: proxyServerDomains,
                   domain_suffix: proxyServerDomains,
                   outbound: "direct"
                 });
               }
-              
-              parsedConfig.route.rules.unshift({
-                  ip_is_private: true,
-                  outbound: "direct"
-              });
-              parsedConfig.route.rules.unshift({
-                  action: "sniff"
-              });
-              parsedConfig.route.rules.unshift({
-                  protocol: "dns",
-                  action: "hijack-dns"
-              });
+            }
 
+            const splitRouteRules: any[] = [];
+            const splitDnsRules: any[] = [];
+            let isWhitelistActive = false;
+
+            if (state.settings.split_tunneling_enabled) {
+              const apps = state.settings.split_tunneling_apps || [];
+              const rawDomains = state.settings.split_tunneling_domains || [];
+
+              const processNames = new Set<string>();
+              const processPaths = new Set<string>();
+
+              for (const item of apps) {
+                const trimmed = item.trim();
+                if (!trimmed) continue;
+
+                if (trimmed.startsWith('/') || /^[a-zA-Z]:[\\/]/.test(trimmed)) {
+                  processPaths.add(trimmed);
+                } else {
+                  const baseName = trimmed.replace(/\.exe$/i, '');
+                  processNames.add(baseName);
+                  processNames.add(`${baseName}.exe`);
+                }
+              }
+
+              const domainSuffixes: string[] = [];
+              const ipCidrs: string[] = [];
+
+              for (const raw of rawDomains) {
+                const trimmed = raw.trim().toLowerCase().replace(/^(\*\.|\.)/, '');
+                if (!trimmed) continue;
+
+                const isIpOrCidr = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}(?:\/[0-9]{1,2})?$/.test(trimmed) ||
+                                   /^[0-9a-fA-F:]+(?:\/[0-9]{1,2})?$/.test(trimmed);
+
+                if (isIpOrCidr) {
+                  if (!trimmed.includes('/')) {
+                    ipCidrs.push(trimmed.includes(':') ? `${trimmed}/128` : `${trimmed}/32`);
+                  } else {
+                    ipCidrs.push(trimmed);
+                  }
+                } else {
+                  domainSuffixes.push(trimmed);
+                }
+              }
+
+              const hasProcessRules = processNames.size > 0 || processPaths.size > 0;
+              const hasDomainRules = domainSuffixes.length > 0;
+              const hasIpRules = ipCidrs.length > 0;
+
+              if (hasProcessRules || hasDomainRules || hasIpRules) {
+                const appsMode = state.settings.split_tunneling_apps_mode || state.settings.split_tunneling_mode || 'whitelist';
+                const domainsMode = state.settings.split_tunneling_domains_mode || state.settings.split_tunneling_mode || 'whitelist';
+
+                if (hasProcessRules) {
+                  const appOutbound = (appsMode === 'whitelist') ? primaryProxyTag : 'direct';
+                  const appRule: any = { outbound: appOutbound };
+                  if (processNames.size > 0) appRule.process_name = Array.from(processNames);
+                  if (processPaths.size > 0) appRule.process_path = Array.from(processPaths);
+                  splitRouteRules.push(appRule);
+
+                  if (appsMode === 'whitelist') isWhitelistActive = true;
+                }
+
+                if (hasDomainRules) {
+                  const domainOutbound = (domainsMode === 'whitelist') ? primaryProxyTag : 'direct';
+                  splitRouteRules.push({
+                    domain_suffix: domainSuffixes,
+                    outbound: domainOutbound
+                  });
+
+                  if (domainsMode === 'whitelist') {
+                    splitDnsRules.push({
+                      domain_suffix: domainSuffixes,
+                      server: 'dns-remote'
+                    });
+                    isWhitelistActive = true;
+                  } else {
+                    splitDnsRules.push({
+                      domain_suffix: domainSuffixes,
+                      server: 'dns-direct'
+                    });
+                  }
+                }
+
+                if (hasIpRules) {
+                  const ipOutbound = (domainsMode === 'whitelist') ? primaryProxyTag : 'direct';
+                  splitRouteRules.push({
+                    ip_cidr: ipCidrs,
+                    outbound: ipOutbound
+                  });
+
+                  if (domainsMode === 'whitelist') isWhitelistActive = true;
+                }
+              }
+            }
+
+            parsedConfig.route.rules = [...systemServiceRules, ...splitRouteRules, ...initialProfileRules];
+
+            if (isWhitelistActive) {
+              parsedConfig.route.final = 'direct';
+            } else {
+              parsedConfig.route.final = primaryProxyTag;
+            }
+
+            if (state.tunEnabled) {
               if (!parsedConfig.dns) parsedConfig.dns = { servers: [], rules: [] };
               if (!Array.isArray(parsedConfig.dns.servers)) parsedConfig.dns.servers = [];
               if (!Array.isArray(parsedConfig.dns.rules)) parsedConfig.dns.rules = [];
@@ -498,103 +609,26 @@ export const useAppStore = create<AppState>()(
                 });
               }
 
+              const serviceDnsRules: any[] = [];
               if (proxyServerDomains.length > 0) {
-                parsedConfig.dns.rules.unshift({
+                serviceDnsRules.push({
                   domain: proxyServerDomains,
                   domain_suffix: proxyServerDomains,
                   server: "dns-direct"
                 });
               }
-
-              parsedConfig.dns.rules.unshift({
+              serviceDnsRules.push({
                 domain_suffix: [".lan", ".local"],
                 server: "dns-direct"
               });
 
-              parsedConfig.dns.final = "dns-remote";
-            }
+              const initialDnsRules = parsedConfig.dns.rules || [];
+              parsedConfig.dns.rules = [...serviceDnsRules, ...splitDnsRules, ...initialDnsRules];
 
-
-            if (state.settings.split_tunneling_enabled) {
-              const apps = state.settings.split_tunneling_apps || [];
-              const rawDomains = state.settings.split_tunneling_domains || [];
-
-              const processNames = new Set<string>();
-              const processPaths = new Set<string>();
-
-              for (const item of apps) {
-                const trimmed = item.trim();
-                if (!trimmed) continue;
-
-                if (trimmed.startsWith('/') || /^[a-zA-Z]:[\\/]/.test(trimmed)) {
-                  processPaths.add(trimmed);
-                } else {
-                  const baseName = trimmed.replace(/\.exe$/i, '');
-                  processNames.add(baseName);
-                  processNames.add(`${baseName}.exe`);
-                }
-              }
-
-              const domains = rawDomains
-                .map(d => d.trim().toLowerCase().replace(/^(\*\.|\.)/, ''))
-                .filter(Boolean);
-
-              const hasProcessRules = processNames.size > 0 || processPaths.size > 0;
-              const hasDomainRules = domains.length > 0;
-
-              if (hasProcessRules || hasDomainRules) {
-                if (!parsedConfig.route) parsedConfig.route = { rules: [] };
-                if (!parsedConfig.route.rules) parsedConfig.route.rules = [];
-
-                const appsMode = state.settings.split_tunneling_apps_mode || state.settings.split_tunneling_mode || 'whitelist';
-                const domainsMode = state.settings.split_tunneling_domains_mode || state.settings.split_tunneling_mode || 'whitelist';
-
-
-                if (hasProcessRules && appsMode === 'whitelist') {
-                  const appRule: any = { outbound: primaryProxyTag };
-                  if (processNames.size > 0) appRule.process_name = Array.from(processNames);
-                  if (processPaths.size > 0) appRule.process_path = Array.from(processPaths);
-                  parsedConfig.route.rules.unshift(appRule);
-                }
-
-                if (hasDomainRules && domainsMode === 'whitelist') {
-                  parsedConfig.route.rules.unshift({
-                    domain_suffix: domains,
-                    outbound: primaryProxyTag
-                  });
-                  if (parsedConfig.dns?.rules) {
-                    parsedConfig.dns.rules.unshift({
-                      domain_suffix: domains,
-                      server: 'dns-remote'
-                    });
-                  }
-                }
-
-
-                if (hasProcessRules && appsMode === 'blacklist') {
-                  const appRule: any = { outbound: 'direct' };
-                  if (processNames.size > 0) appRule.process_name = Array.from(processNames);
-                  if (processPaths.size > 0) appRule.process_path = Array.from(processPaths);
-                  parsedConfig.route.rules.unshift(appRule);
-                }
-
-                if (hasDomainRules && domainsMode === 'blacklist') {
-                  parsedConfig.route.rules.unshift({
-                    domain_suffix: domains,
-                    outbound: 'direct'
-                  });
-                  if (parsedConfig.dns?.rules) {
-                    parsedConfig.dns.rules.unshift({
-                      domain_suffix: domains,
-                      server: 'dns-direct'
-                    });
-                  }
-                }
-
-
-                if ((hasProcessRules && appsMode === 'whitelist') || (hasDomainRules && domainsMode === 'whitelist')) {
-                  parsedConfig.route.final = 'direct';
-                }
+              if (isWhitelistActive) {
+                parsedConfig.dns.final = "dns-direct";
+              } else {
+                parsedConfig.dns.final = "dns-remote";
               }
             }
 

@@ -92,7 +92,7 @@
   color: var(--text-primary);
   font-size: 14px;
   outline: none;
-  text-align: right;
+  text-align: center;
   transition: border-color 0.2s;
 }
 
@@ -280,11 +280,55 @@ input:checked + .slider:before {
   border-bottom: 1px solid var(--border-header-glass);
 }
 
-.modal-header h2 {
+.modal-header-title-container {
+  position: relative;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  flex: 1;
+}
+
+.modal-header-title-text {
+  position: absolute;
+  left: 0;
   margin: 0;
   font-size: 18px;
   font-weight: 600;
   color: var(--text-primary);
+  white-space: nowrap;
+  line-height: 28px;
+  will-change: transform, opacity;
+}
+
+.modal-header-title-text.slide-in {
+  animation: modal-title-slide-in 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.modal-header-title-text.slide-out {
+  animation: modal-title-slide-out 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes modal-title-slide-in {
+  0% {
+    transform: translateY(-24px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes modal-title-slide-out {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(24px);
+    opacity: 0;
+  }
 }
 
 .modal-tabs {
@@ -318,6 +362,19 @@ input:checked + .slider:before {
   padding: 20px;
   height: 320px;
   overflow-y: auto;
+}
+
+.modal-tab-fade-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  animation: pageFadeIn 0.2s ease-out forwards;
+  will-change: opacity;
+}
+
+@keyframes pageFadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
 }
 
 .apps-list-container,
@@ -436,6 +493,43 @@ input:checked + .slider:before {
   color: var(--text-primary);
   font-size: 15px;
   font-weight: 500;
+}
+
+.crossfade-text-container {
+  position: relative;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  min-width: 140px;
+}
+
+.crossfade-text-item {
+  position: absolute;
+  left: 0;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  will-change: opacity;
+}
+
+.crossfade-text-item.fade-in {
+  animation: textCrossfadeIn 0.2s ease-out forwards;
+}
+
+.crossfade-text-item.fade-out {
+  animation: textCrossfadeOut 0.2s ease-out forwards;
+}
+
+@keyframes textCrossfadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes textCrossfadeOut {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
 }
 
 .info-icon {

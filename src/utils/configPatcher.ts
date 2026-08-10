@@ -192,6 +192,168 @@ export function getPrimaryProxyTag(config: any): string {
   return 'direct';
 }
 
+export interface ParsedDnsConfig {
+  type: string;
+  server: string;
+  server_port?: number;
+  path?: string;
+}
+
+export function parseCustomDnsAddress(rawInput: string, isDohEnabled: boolean = true): ParsedDnsConfig {
+  let str = (rawInput || '').trim();
+
+  if (!str) {
+    if (isDohEnabled) {
+      return { type: 'https', server: '1.1.1.1', path: '/dns-query' };
+    }
+    return { type: 'udp', server: '1.1.1.1' };
+  }
+
+  let lower = str.toLowerCase();
+
+
+  if (lower.startsWith('doh://')) {
+    str = 'https://' + str.substring(6);
+    lower = str.toLowerCase();
+  } else if (lower.startsWith('dot://')) {
+    str = 'tls://' + str.substring(6);
+    lower = str.toLowerCase();
+  } else if (lower.startsWith('doq://')) {
+    str = 'quic://' + str.substring(6);
+    lower = str.toLowerCase();
+  }
+
+
+  if (lower.startsWith('https://')) {
+    const withoutScheme = str.substring(8);
+    return parseHttpsDns(withoutScheme);
+  }
+
+  if (lower.startsWith('h3://')) {
+    const withoutScheme = str.substring(5);
+    const parsed = parseHttpsDns(withoutScheme);
+    parsed.type = 'h3';
+    return parsed;
+  }
+
+  if (lower.startsWith('tls://')) {
+    const withoutScheme = str.substring(6);
+    return parseHostPortDns(withoutScheme, 'tls');
+  }
+
+  if (lower.startsWith('quic://')) {
+    const withoutScheme = str.substring(7);
+    return parseHostPortDns(withoutScheme, 'quic');
+  }
+
+  if (lower.startsWith('udp://')) {
+    const withoutScheme = str.substring(6);
+    return parseHostPortDns(withoutScheme, 'udp');
+  }
+
+  if (lower.startsWith('tcp://')) {
+    const withoutScheme = str.substring(6);
+    return parseHostPortDns(withoutScheme, 'tcp');
+  }
+
+
+  if (str.includes('/')) {
+    return parseHttpsDns(str);
+  }
+
+
+  const hostPort = parseHostAndPort(str);
+
+
+  if (hostPort.port === 853) {
+    return { type: 'tls', server: hostPort.host, server_port: 853 };
+  }
+
+
+  if (hostPort.port === 443 && isDohEnabled) {
+    return { type: 'https', server: hostPort.host, server_port: 443, path: '/dns-query' };
+  }
+
+
+  if (isDohEnabled) {
+    const res: ParsedDnsConfig = { type: 'https', server: hostPort.host, path: '/dns-query' };
+    if (hostPort.port) res.server_port = hostPort.port;
+    return res;
+  } else {
+    const res: ParsedDnsConfig = { type: 'udp', server: hostPort.host };
+    if (hostPort.port) res.server_port = hostPort.port;
+    return res;
+  }
+}
+
+function parseHttpsDns(inputWithoutScheme: string): ParsedDnsConfig {
+  const slashIdx = inputWithoutScheme.indexOf('/');
+  let hostPart = slashIdx !== -1 ? inputWithoutScheme.substring(0, slashIdx) : inputWithoutScheme;
+  let rawPath = slashIdx !== -1 ? inputWithoutScheme.substring(slashIdx) : '/dns-query';
+
+  if (!rawPath || rawPath === '/') {
+    rawPath = '/dns-query';
+  }
+
+  const hostPort = parseHostAndPort(hostPart);
+  const result: ParsedDnsConfig = {
+    type: 'https',
+    server: hostPort.host,
+    path: rawPath
+  };
+  if (hostPort.port) {
+    result.server_port = hostPort.port;
+  }
+  return result;
+}
+
+function parseHostPortDns(inputWithoutScheme: string, defaultType: string): ParsedDnsConfig {
+  const cleanInput = inputWithoutScheme.replace(/\/+$/, '');
+  const hostPort = parseHostAndPort(cleanInput);
+  const result: ParsedDnsConfig = {
+    type: defaultType,
+    server: hostPort.host
+  };
+  if (hostPort.port) {
+    result.server_port = hostPort.port;
+  }
+  return result;
+}
+
+function parseHostAndPort(input: string): { host: string; port?: number } {
+  let str = input.trim();
+
+
+  if (str.startsWith('[')) {
+    const closeBracketIdx = str.indexOf(']');
+    if (closeBracketIdx !== -1) {
+      const ipv6Host = str.substring(1, closeBracketIdx);
+      const remainder = str.substring(closeBracketIdx + 1);
+      if (remainder.startsWith(':')) {
+        const p = parseInt(remainder.substring(1), 10);
+        if (!isNaN(p) && p > 0 && p <= 65535) {
+          return { host: ipv6Host, port: p };
+        }
+      }
+      return { host: ipv6Host };
+    }
+  }
+
+
+  const colonCount = (str.match(/:/g) || []).length;
+  if (colonCount === 1) {
+    const lastColon = str.lastIndexOf(':');
+    const host = str.substring(0, lastColon);
+    const portStr = str.substring(lastColon + 1);
+    const p = parseInt(portStr, 10);
+    if (!isNaN(p) && p > 0 && p <= 65535) {
+      return { host, port: p };
+    }
+  }
+
+  return { host: str };
+}
+
 function patchRemoteDns(config: any, settings: AppSettings) {
   if (!config.dns || !Array.isArray(config.dns.servers)) return;
 
@@ -206,46 +368,36 @@ function patchRemoteDns(config: any, settings: AppSettings) {
       config.route.default_domain_resolver = 'dns-direct';
     }
 
-    let dnsUrl = '';
     const mode = settings.remote_dns || 'auto';
+    const isDohEnabled = settings.remote_dns_doh ?? true;
 
-    if (mode === 'cloudflare_doh' || mode === 'cloudflare') {
-      dnsUrl = 'https://1.1.1.1/dns-query';
+    if (mode === 'custom') {
+      const customAddr = settings.custom_remote_dns || '';
+      applyDnsAddress(dnsRemoteServer, customAddr, isDohEnabled);
+    } else if (mode === 'cloudflare_doh' || mode === 'cloudflare') {
+      const addr = isDohEnabled ? 'https://1.1.1.1/dns-query' : '1.1.1.1';
+      applyDnsAddress(dnsRemoteServer, addr, isDohEnabled);
     } else if (mode === 'adguard_doh' || mode === 'adguard') {
-      dnsUrl = 'https://94.140.14.14/dns-query';
+      const addr = isDohEnabled ? 'https://94.140.14.14/dns-query' : '94.140.14.14';
+      applyDnsAddress(dnsRemoteServer, addr, isDohEnabled);
     } else if (mode === 'google_dot' || mode === 'google') {
-      dnsUrl = 'tls://dns.google';
+      const addr = isDohEnabled ? 'https://dns.google/dns-query' : 'tls://dns.google';
+      applyDnsAddress(dnsRemoteServer, addr, isDohEnabled);
     } else if (mode === 'quad9') {
-      dnsUrl = (settings.remote_dns_doh ?? true) ? 'https://dns.quad9.net/dns-query' : '9.9.9.9';
-    } else if (mode === 'custom') {
-      dnsUrl = settings.remote_dns;
-    }
-
-    if (dnsUrl && dnsUrl.trim().length > 0) {
-      applyDnsAddress(dnsRemoteServer, dnsUrl.trim());
+      const quad9Url = isDohEnabled ? 'https://dns.quad9.net/dns-query' : '9.9.9.9';
+      applyDnsAddress(dnsRemoteServer, quad9Url, isDohEnabled);
+    } else if (mode !== 'auto' && (mode.includes('://') || mode.includes('.') || mode.includes(':'))) {
+      applyDnsAddress(dnsRemoteServer, mode, isDohEnabled);
     } else {
 
-      const isDohEnabled = settings.remote_dns_doh ?? true;
-      const currentType = dnsRemoteServer.type || '';
-      const currentServer = dnsRemoteServer.server || '1.1.1.1';
-
-      if (isDohEnabled) {
-        if (currentType === 'udp' || currentType === 'tcp' || !currentType) {
-          applyDnsAddress(dnsRemoteServer, `https://${currentServer}/dns-query`);
-        }
-      } else {
-        if (currentType !== 'udp') {
-          dnsRemoteServer.type = 'udp';
-          delete dnsRemoteServer.path;
-        }
-      }
+      const autoUrl = isDohEnabled ? 'https://1.1.1.1/dns-query' : '1.1.1.1';
+      applyDnsAddress(dnsRemoteServer, autoUrl, isDohEnabled);
     }
   }
 
   if (isStrictlyTun) {
     config.dns.final = 'dns-remote';
   }
-
 
   if (Array.isArray(config.dns.rules)) {
     for (const rule of config.dns.rules) {
@@ -256,32 +408,21 @@ function patchRemoteDns(config: any, settings: AppSettings) {
   }
 }
 
-function applyDnsAddress(serverObj: any, address: string) {
+function applyDnsAddress(serverObj: any, address: string, isDohEnabled: boolean = true) {
   delete serverObj.address;
   delete serverObj.server_port;
   delete serverObj.responses;
   delete serverObj.domain_resolver;
+  delete serverObj.path;
 
-  if (address.startsWith('https://')) {
-    serverObj.type = 'https';
-    const urlWithoutScheme = address.substring(8);
-    const slashIdx = urlWithoutScheme.indexOf('/');
-    const host = slashIdx !== -1 ? urlWithoutScheme.substring(0, slashIdx) : urlWithoutScheme;
-    const path = slashIdx !== -1 ? urlWithoutScheme.substring(slashIdx) : '/dns-query';
-    serverObj.server = host;
-    serverObj.path = path;
-  } else if (address.startsWith('tls://')) {
-    serverObj.type = 'tls';
-    serverObj.server = address.substring(6);
-    delete serverObj.path;
-  } else if (address.startsWith('udp://')) {
-    serverObj.type = 'udp';
-    serverObj.server = address.substring(6);
-    delete serverObj.path;
-  } else {
-    serverObj.type = 'udp';
-    serverObj.server = address;
-    delete serverObj.path;
+  const parsed = parseCustomDnsAddress(address, isDohEnabled);
+  serverObj.type = parsed.type;
+  serverObj.server = parsed.server;
+  if (parsed.server_port) {
+    serverObj.server_port = parsed.server_port;
+  }
+  if (parsed.path) {
+    serverObj.path = parsed.path;
   }
 }
 

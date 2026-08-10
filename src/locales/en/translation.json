@@ -141,9 +141,12 @@
     "onlyHttpSubscriptions": "Only HTTP(S) subscriptions can be updated",
     "adminRequired": "Administrator rights required (Run as Administrator)",
     "selectModeFirst": "Please select at least one connection mode",
-    "connectionTimeout": "Connection timed out"
+    "connectionTimeout": "Connection timed out",
+    "clickToExpand": "Click to expand",
+    "clickToCollapse": "Click to collapse"
   },
   "mode": {
+    "label": "Mode",
     "proxy": "Proxy",
     "tun": "TUN",
     "singbox": "sing-box",
@@ -176,6 +179,10 @@
     "fingerprintDesc": "Masks your TLS traffic as selected browser/client. If Auto is selected, fingerprint will be taken from configuration.",
     "remoteDnsTitle": "Remote DNS",
     "remoteDns": "Remote DNS",
+    "customDns": "Custom",
+    "customDnsLabel": "Custom DNS Address",
+    "customDnsPlaceholder": "e.g. 1.1.1.1, https://dns.google/dns-query, tls://dns.google",
+    "customDnsHint": "Supported schemes: https:// (DoH), tls:// or dot:// (DoT), quic:// or doq:// (DoQ), udp://, tcp://, or plain IP/domain.",
     "useDoh": "Use DoH",
     "remoteDnsStrictlyTun": "DNS via tunnel only",
     "fakeIpTitle": "Fake DNS (Fake IP)",

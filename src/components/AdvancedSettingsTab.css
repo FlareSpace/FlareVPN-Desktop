@@ -315,3 +315,55 @@ input:checked + .slider:before {
   from { opacity: 0; transform: translateY(-6px) scale(0.96); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
+
+.custom-dns-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 0;
+  width: 100%;
+}
+
+.custom-dns-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.dns-type-badge {
+  background: color-mix(in srgb, var(--accent-color, #3b82f6) 18%, transparent);
+  color: var(--accent-color, #60a5fa);
+  border: 1px solid color-mix(in srgb, var(--accent-color, #3b82f6) 35%, transparent);
+  border-radius: 8px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+}
+
+.custom-dns-input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+
+.custom-dns-input:focus {
+  border-color: var(--accent-color, #60a5fa);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-color, #3b82f6) 25%, transparent);
+}
+
+.custom-dns-hint {
+  font-size: 12px;
+  color: var(--text-secondary, #9e9ea7);
+  line-height: 1.4;
+  opacity: 0.8;
+}

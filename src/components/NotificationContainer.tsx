@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAppStore, AppNotification } from '../store/useAppStore';
 import './NotificationContainer.css';
 
@@ -74,6 +75,7 @@ const NotificationItem = ({
 };
 
 export default function NotificationContainer() {
+  const { t } = useTranslation();
   const notifications = useAppStore((state) => state.notifications);
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -108,7 +110,7 @@ export default function NotificationContainer() {
     <div 
       className={`notification-container ${isStacked ? 'is-stacked' : ''} ${isExpanded ? 'is-expanded' : ''}`}
       onClick={handleContainerClick}
-      title={isStacked ? 'Нажмите, чтобы развернуть' : isExpanded ? 'Нажмите, чтобы свернуть' : undefined}
+      title={isStacked ? t('notifications.clickToExpand') : isExpanded ? t('notifications.clickToCollapse') : undefined}
     >
       {reversedNotifications.map((notif, index) => (
         <NotificationItem 

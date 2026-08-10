@@ -141,9 +141,12 @@
     "onlyHttpSubscriptions": "Обновить можно только HTTP(S) подписки",
     "adminRequired": "Нет прав администратора (Запустите от имени Администратора)",
     "selectModeFirst": "Выберите хотя бы один режим подключения",
-    "connectionTimeout": "Время подключения истекло"
+    "connectionTimeout": "Время подключения истекло",
+    "clickToExpand": "Нажмите, чтобы развернуть",
+    "clickToCollapse": "Нажмите, чтобы свернуть"
   },
   "mode": {
+    "label": "Режим",
     "proxy": "Прокси",
     "tun": "TUN",
     "singbox": "sing-box",
@@ -176,6 +179,10 @@
     "fingerprintDesc": "Маскирует ваш TLS трафик под выбранный браузер/клиент. Если выбрано Auto, отпечаток будет взят из конфигурации.",
     "remoteDnsTitle": "Remote DNS",
     "remoteDns": "Remote DNS",
+    "customDns": "Свой",
+    "customDnsLabel": "Свой DNS-адрес",
+    "customDnsPlaceholder": "например: 1.1.1.1, https://dns.google/dns-query, tls://dns.google",
+    "customDnsHint": "Поддерживаемые схемы: https:// (DoH), tls:// или dot:// (DoT), quic:// или doq:// (DoQ), udp://, tcp:// или IP/домен.",
     "useDoh": "Использовать DoH",
     "remoteDnsStrictlyTun": "DNS только через туннель",
     "fakeIpTitle": "Поддельная DNS (Fake IP)",

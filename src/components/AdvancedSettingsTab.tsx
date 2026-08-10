@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAppStore } from '../store/useAppStore';
 import { ChevronRight, Check } from 'lucide-react';
+import { parseCustomDnsAddress } from '../utils/configPatcher';
 import './AdvancedSettingsTab.css';
 
 export default function AdvancedSettingsTab() {
@@ -9,10 +10,13 @@ export default function AdvancedSettingsTab() {
   const settings = useAppStore(state => state.settings);
   const updateSetting = useAppStore(state => state.updateSetting);
 
-
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
-
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const parsedCustomDns = useMemo(() => {
+    if (settings.remote_dns !== 'custom') return null;
+    return parseCustomDnsAddress(settings.custom_remote_dns || '', settings.remote_dns_doh ?? true);
+  }, [settings.remote_dns, settings.custom_remote_dns, settings.remote_dns_doh]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -323,13 +327,15 @@ export default function AdvancedSettingsTab() {
                   className="dropdown-trigger-btn"
                   onClick={() => toggleDropdown('tls_fingerprint')}
                 >
-                  <span className="capitalize">{settings.tls_fingerprint || 'auto'}</span>
+                  <span className={settings.tls_fingerprint === 'qq' ? '' : 'capitalize'}>
+                    {settings.tls_fingerprint === 'qq' ? 'QQ' : (settings.tls_fingerprint || 'auto')}
+                  </span>
                   <ChevronRight className={`dropdown-arrow ${openDropdown === 'tls_fingerprint' ? 'open' : ''}`} size={16} />
                 </button>
 
                 {openDropdown === 'tls_fingerprint' && (
                   <div className="context-menu">
-                    {['auto', 'chrome', 'firefox', 'safari', 'edge', 'ios', 'android', 'randomized'].map((fp) => (
+                    {['auto', 'chrome', 'firefox', 'safari', 'edge', 'ios', 'android', 'qq', 'randomized'].map((fp) => (
                       <div
                         key={fp}
                         className={`context-menu-item ${settings.tls_fingerprint === fp ? 'active' : ''}`}
@@ -338,7 +344,7 @@ export default function AdvancedSettingsTab() {
                           setOpenDropdown(null);
                         }}
                       >
-                        <span className="capitalize">{fp === 'auto' ? 'Auto' : fp}</span>
+                        <span className={fp === 'qq' ? '' : 'capitalize'}>{fp === 'auto' ? 'Auto' : fp === 'qq' ? 'QQ' : fp}</span>
                         {settings.tls_fingerprint === fp && <Check size={16} />}
                       </div>
                     ))}
@@ -363,7 +369,9 @@ export default function AdvancedSettingsTab() {
                 >
                   <span>
                     {settings.remote_dns === 'auto'
-                      ? (t('advancedTab.auto') || 'Авто')
+                      ? t('advancedTab.auto')
+                      : settings.remote_dns === 'custom'
+                      ? t('advancedTab.customDns')
                       : settings.remote_dns}
                   </span>
                   <ChevronRight className={`dropdown-arrow ${openDropdown === 'remote_dns' ? 'open' : ''}`} size={16} />
@@ -372,11 +380,12 @@ export default function AdvancedSettingsTab() {
                 {openDropdown === 'remote_dns' && (
                   <div className="context-menu">
                     {[
-                      { id: 'auto', name: t('advancedTab.auto') || 'Авто' },
+                      { id: 'auto', name: t('advancedTab.auto') },
                       { id: 'cloudflare', name: 'Cloudflare (1.1.1.1)' },
                       { id: 'google', name: 'Google (8.8.8.8)' },
                       { id: 'adguard', name: 'AdGuard' },
                       { id: 'quad9', name: 'Quad9' },
+                      { id: 'custom', name: t('advancedTab.customDns') },
                     ].map((dns) => (
                       <div
                         key={dns.id}
@@ -394,6 +403,33 @@ export default function AdvancedSettingsTab() {
                 )}
               </div>
             </div>
+
+            {settings.remote_dns === 'custom' && (
+              <>
+                <div className="setting-divider"></div>
+                <div className="custom-dns-container">
+                  <div className="custom-dns-header">
+                    <span className="setting-label">{t('advancedTab.customDnsLabel')}</span>
+                    {parsedCustomDns && (
+                      <span className="dns-type-badge">
+                        {parsedCustomDns.type.toUpperCase()}{parsedCustomDns.server ? `: ${parsedCustomDns.server}` : ''}
+                        {parsedCustomDns.server_port ? `:${parsedCustomDns.server_port}` : ''}
+                      </span>
+                    )}
+                  </div>
+                  <input
+                    type="text"
+                    className="custom-dns-input"
+                    placeholder={t('advancedTab.customDnsPlaceholder')}
+                    value={settings.custom_remote_dns || ''}
+                    onChange={(e) => updateSetting('custom_remote_dns', e.target.value)}
+                  />
+                  <span className="custom-dns-hint">
+                    {t('advancedTab.customDnsHint')}
+                  </span>
+                </div>
+              </>
+            )}
 
             <div className="setting-divider"></div>
 

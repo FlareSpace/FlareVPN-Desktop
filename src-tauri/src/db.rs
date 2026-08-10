@@ -52,6 +52,7 @@ pub struct AppSettings {
     pub tls_spoof_method: String,
     pub tls_fingerprint: String,
     pub remote_dns: String,
+    pub custom_remote_dns: String,
     pub remote_dns_doh: bool,
     pub remote_dns_strictly_tun: bool,
     pub fake_ip_enabled: bool,
@@ -94,6 +95,7 @@ impl Default for AppSettings {
             tls_spoof_method: "wrong-ack".to_string(),
             tls_fingerprint: "auto".to_string(),
             remote_dns: "auto".to_string(),
+            custom_remote_dns: "".to_string(),
             remote_dns_doh: true,
             remote_dns_strictly_tun: false,
             fake_ip_enabled: false,
@@ -247,11 +249,7 @@ impl DbState {
                         }
                         "auto_update_interval" => settings.auto_update_interval = value.parse().unwrap_or(3600),
                         "split_tunneling_enabled" => settings.split_tunneling_enabled = value == "true",
-                        "split_tunneling_mode" => {
-                            settings.split_tunneling_mode = value.clone();
-                            settings.split_tunneling_apps_mode = value.clone();
-                            settings.split_tunneling_domains_mode = value;
-                        }
+                        "split_tunneling_mode" => settings.split_tunneling_mode = value,
                         "split_tunneling_apps_mode" => settings.split_tunneling_apps_mode = value,
                         "split_tunneling_domains_mode" => settings.split_tunneling_domains_mode = value,
                         "split_tunneling_apps" => {
@@ -276,6 +274,7 @@ impl DbState {
                         "tls_spoof_method" => settings.tls_spoof_method = value,
                         "tls_fingerprint" => settings.tls_fingerprint = value,
                         "remote_dns" => settings.remote_dns = value,
+                        "custom_remote_dns" => settings.custom_remote_dns = value,
                         "remote_dns_doh" => settings.remote_dns_doh = value == "true",
                         "remote_dns_strictly_tun" => settings.remote_dns_strictly_tun = value == "true",
                         "fake_ip_enabled" => settings.fake_ip_enabled = value == "true",
@@ -333,6 +332,7 @@ impl DbState {
         stmt.execute(params!["tls_spoof_method", &settings.tls_spoof_method])?;
         stmt.execute(params!["tls_fingerprint", &settings.tls_fingerprint])?;
         stmt.execute(params!["remote_dns", &settings.remote_dns])?;
+        stmt.execute(params!["custom_remote_dns", &settings.custom_remote_dns])?;
         stmt.execute(params!["remote_dns_doh", settings.remote_dns_doh.to_string()])?;
         stmt.execute(params!["remote_dns_strictly_tun", settings.remote_dns_strictly_tun.to_string()])?;
         stmt.execute(params!["fake_ip_enabled", settings.fake_ip_enabled.to_string()])?;
