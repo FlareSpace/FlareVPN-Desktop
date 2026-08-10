@@ -125,50 +125,70 @@ pub fn ensure_sidecar_executable_linux(app: &AppHandle) {
     use std::os::unix::fs::PermissionsExt;
     use std::process::Command;
 
-    let mut candidate_paths = vec![
-        PathBuf::from("/usr/bin/sing-box"),
-        PathBuf::from("/usr/bin/sing-box-x86_64-unknown-linux-gnu"),
-        PathBuf::from("/usr/lib/flare-vpn/sing-box"),
-        PathBuf::from("/usr/lib/com.flare.vpn/sing-box"),
-    ];
+    let mut active_path: Option<PathBuf> = None;
 
     if let Ok(resource_dir) = app.path().resource_dir() {
-        candidate_paths.push(resource_dir.join("sing-box"));
-        candidate_paths.push(resource_dir.join("sing-box-x86_64-unknown-linux-gnu"));
-        candidate_paths.push(resource_dir.join("bin/sing-box-x86_64-unknown-linux-gnu"));
-    }
-
-    if let Ok(cwd) = std::env::current_dir() {
-        candidate_paths.push(cwd.join("src-tauri/bin/sing-box-x86_64-unknown-linux-gnu"));
-        candidate_paths.push(cwd.join("bin/sing-box-x86_64-unknown-linux-gnu"));
-    }
-
-    for path in candidate_paths {
-        if path.is_file() {
-            if let Ok(metadata) = std::fs::metadata(&path) {
-                let mut perm = metadata.permissions();
-                if perm.mode() & 0o111 == 0 {
-                    perm.set_mode(0o755);
-                    let _ = std::fs::set_permissions(&path, perm);
-                }
-            }
-
-            let path_str = path.to_string_lossy().to_string();
-            let has_cap = match Command::new("getcap").arg(&path_str).output() {
-                Ok(out) => {
-                    let stdout = String::from_utf8_lossy(&out.stdout);
-                    stdout.contains("cap_net_admin")
-                }
-                Err(_) => false,
-            };
-
-            if !has_cap {
-                let _ = Command::new("pkexec")
-                    .args(["setcap", "cap_net_admin,cap_net_raw+ep", &path_str])
-                    .status();
+        for name in &["sing-box-x86_64-unknown-linux-gnu", "sing-box", "bin/sing-box-x86_64-unknown-linux-gnu"] {
+            let p = resource_dir.join(name);
+            if p.is_file() {
+                active_path = Some(p);
+                break;
             }
         }
     }
+
+    if active_path.is_none() {
+        for p_str in &["/usr/bin/sing-box", "/usr/bin/sing-box-x86_64-unknown-linux-gnu", "/usr/lib/flare-vpn/sing-box", "/usr/lib/com.flare.vpn/sing-box"] {
+            let p = PathBuf::from(p_str);
+            if p.is_file() {
+                active_path = Some(p);
+                break;
+            }
+        }
+    }
+
+    if active_path.is_none() {
+        if let Ok(cwd) = std::env::current_dir() {
+            for name in &["src-tauri/bin/sing-box-x86_64-unknown-linux-gnu", "bin/sing-box-x86_64-unknown-linux-gnu"] {
+                let p = cwd.join(name);
+                if p.is_file() {
+                    active_path = Some(p);
+                    break;
+                }
+            }
+        }
+    }
+
+    let path = match active_path {
+        Some(p) => p,
+        None => return,
+    };
+
+    let is_exec = std::fs::metadata(&path)
+        .map(|m| m.permissions().mode() & 0o111 != 0)
+        .unwrap_or(false);
+
+    let path_str = path.to_string_lossy().to_string();
+    let has_cap = match Command::new("getcap").arg(&path_str).output() {
+        Ok(out) => {
+            let stdout = String::from_utf8_lossy(&out.stdout);
+            stdout.contains("cap_net_admin")
+        }
+        Err(_) => false,
+    };
+
+    if is_exec && has_cap {
+        return;
+    }
+
+    let cmd_str = format!(
+        "chmod +x '{0}' && setcap 'cap_net_admin,cap_net_raw+ep' '{0}'",
+        path_str.replace("'", "'\\''")
+    );
+
+    let _ = Command::new("pkexec")
+        .args(["sh", "-c", &cmd_str])
+        .status();
 }
 
 #[tauri::command]
