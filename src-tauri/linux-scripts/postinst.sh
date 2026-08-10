@@ -4,8 +4,7 @@ set -e
 
 for file in /usr/bin/sing-box* /usr/bin/flarevpn* /usr/lib/flare*/sing-box* /usr/lib/com.flare.vpn/sing-box*; do
     if [ -f "$file" ]; then
-        chown root:root "$file" || true
-        chmod 4755 "$file" || true
+        chmod 755 "$file" || true
         setcap 'cap_net_admin,cap_net_raw+ep' "$file" || true
     fi
 done

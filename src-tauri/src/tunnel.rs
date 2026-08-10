@@ -164,11 +164,14 @@ pub fn ensure_sidecar_executable_linux(app: &AppHandle) {
         None => return,
     };
 
-    let mode = std::fs::metadata(&path)
-        .map(|m| m.permissions().mode())
-        .unwrap_or(0);
-    let is_exec = mode & 0o111 != 0;
-    let is_setuid = mode & 0o4000 != 0;
+    if let Ok(metadata) = std::fs::metadata(&path) {
+        let mode = metadata.permissions().mode();
+        if mode & 0o111 == 0 || mode & 0o4000 != 0 {
+            let mut perm = metadata.permissions();
+            perm.set_mode(0o755);
+            let _ = std::fs::set_permissions(&path, perm);
+        }
+    }
 
     let path_str = path.to_string_lossy().to_string();
     let has_cap = match Command::new("getcap").arg(&path_str).output() {
@@ -179,21 +182,12 @@ pub fn ensure_sidecar_executable_linux(app: &AppHandle) {
         Err(_) => false,
     };
 
-    let rule_path = std::path::Path::new("/etc/polkit-1/rules.d/10-flarevpn-resolved.rules");
-    let has_rule = !std::path::Path::new("/etc/polkit-1/rules.d").exists() || rule_path.exists();
-
-    if is_exec && is_setuid && has_cap && has_rule {
+    if has_cap {
         return;
     }
 
-    let escaped_path = path_str.replace("'", "'\\''");
-    let script = format!(
-        "chown root:root '{0}' && chmod 4755 '{0}' && setcap 'cap_net_admin,cap_net_raw+ep' '{0}' && if [ -d /etc/polkit-1/rules.d ]; then printf 'polkit.addRule(function(action, subject) {{\n    if ((action.id == \"org.freedesktop.resolve1.set-link-dns\" || action.id == \"org.freedesktop.resolve1.set-link-domains\" || action.id == \"org.freedesktop.resolve1.set-link-default-route\" || action.id == \"org.freedesktop.resolve1.set-link-llmnr\" || action.id == \"org.freedesktop.resolve1.set-link-mdns\" || action.id == \"org.freedesktop.resolve1.set-link-dnsovertls\") && subject.local && subject.active) {{\n        return polkit.Result.YES;\n    }}\n}});\n' > /etc/polkit-1/rules.d/10-flarevpn-resolved.rules && chmod 644 /etc/polkit-1/rules.d/10-flarevpn-resolved.rules; fi",
-        escaped_path
-    );
-
     let _ = Command::new("pkexec")
-        .args(["sh", "-c", &script])
+        .args(["setcap", "cap_net_admin,cap_net_raw+ep", &path_str])
         .status();
 }
 
