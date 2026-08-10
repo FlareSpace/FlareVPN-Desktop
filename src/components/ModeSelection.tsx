@@ -48,7 +48,7 @@ export default function ModeSelection() {
     };
   }, []);
 
-  // Show during connecting and connected states
+
   if ((status !== 'connected' && status !== 'connecting') || !activeProfile) {
     return null;
   }

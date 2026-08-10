@@ -1,7 +1,7 @@
 use serde_json::{json, Map, Value};
 use crate::parser::protocol::{
     convert_vless, convert_vmess, convert_trojan, convert_shadowsocks,
-    convert_hysteria, convert_hysteria2, convert_socks, convert_http
+    convert_hysteria, convert_hysteria2, convert_socks, convert_http, convert_wireguard, convert_tuic
 };
 
 pub fn convert_outbounds_public(xray_outbounds: &[Value]) -> Vec<Value> {
@@ -54,6 +54,8 @@ pub fn convert_outbounds(xray_outbounds: &[Value]) -> Vec<Value> {
             "blackhole" => { sb_ob.insert("type".to_string(), json!("block")); },
             "socks" => convert_socks(xray_ob, &mut sb_ob),
             "http" => convert_http(xray_ob, &mut sb_ob),
+            "wireguard" | "wg" => convert_wireguard(xray_ob, &mut sb_ob),
+            "tuic" => convert_tuic(xray_ob, &mut sb_ob),
             _ => continue,
         }
         

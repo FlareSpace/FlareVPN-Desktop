@@ -16,8 +16,6 @@
   width: 100%;
   padding: 24px;
   background: var(--bg-header-glass);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border-header-glass);
 }
 
@@ -247,15 +245,11 @@ input:checked + .slider:before {
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
   animation: fadeIn 0.2s ease-out;
 }
 
 .modal-content.blurred-modal {
   background: var(--bg-card);
-  backdrop-filter: blur(50px);
-  -webkit-backdrop-filter: blur(50px);
   border: 1px solid var(--border-color);
   border-radius: 24px;
   width: 90%;
@@ -283,8 +277,6 @@ input:checked + .slider:before {
   justify-content: space-between;
   align-items: center;
   background: var(--bg-header-glass);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border-header-glass);
 }
 
@@ -487,21 +479,20 @@ input:checked + .slider:before {
 
 .mode-context-menu {
   position: absolute;
-  bottom: calc(100% + 8px);
+  bottom: calc(100% + 6px);
   right: 0;
   min-width: 170px;
-  background: var(--context-menu-bg, var(--bg-card));
-  backdrop-filter: blur(30px) saturate(180%);
-  -webkit-backdrop-filter: blur(30px) saturate(180%);
-  border: 1px solid var(--context-menu-border, var(--border-color));
-  border-radius: 18px; 
+  background: var(--context-menu-bg, rgba(26, 26, 32, 0.95));
+  border: 1px solid var(--context-menu-border, rgba(255, 255, 255, 0.12));
+  border-radius: 16px; 
   padding: 6px;
   display: flex;
   flex-direction: column;
   gap: 4px;
   z-index: 1050;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  animation: fadeIn 0.15s ease-out;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.25);
+  transform-origin: bottom right;
+  animation: contextMenuPopBottom 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .mode-context-menu-item {
@@ -509,22 +500,33 @@ input:checked + .slider:before {
   align-items: center;
   justify-content: space-between;
   padding: 10px 14px;
-  border-radius: 12px;
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 500;
   color: var(--text-primary);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 }
 
 .mode-context-menu-item:hover {
-  background: var(--context-menu-hover, rgba(0, 0, 0, 0.05));
+  background: var(--context-menu-hover, rgba(255, 255, 255, 0.08));
 }
 
 .mode-context-menu-item.active {
-  color: var(--accent-color);
-  background: color-mix(in srgb, var(--accent-color) 12%, transparent);
+  color: var(--accent-color, #60a5fa);
+  background: color-mix(in srgb, var(--accent-color, #3b82f6) 15%, transparent);
   font-weight: 600;
+}
+
+@keyframes contextMenuPopBottom {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .modal-actions {
@@ -569,7 +571,7 @@ input:checked + .slider:before {
   opacity: 0.9;
 }
 
-/* Apps List & Process Picker */
+
 .apps-header-action {
   margin-bottom: 12px;
 }
@@ -613,7 +615,7 @@ input:checked + .slider:before {
   padding-top: 12px;
 }
 
-/* Process Picker View */
+
 .process-picker-container {
   display: flex;
   flex-direction: column;

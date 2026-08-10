@@ -4,6 +4,7 @@ import { ChevronRight, RefreshCw, Gauge, MoreVertical, Link, Check } from 'lucid
 import { useTranslation } from 'react-i18next';
 import { useAppStore, Subscription, Profile } from '../store/useAppStore';
 import { formatTraffic, getProtocolDisplay, formatUpdateInterval, formatDate } from '../utils/parser';
+import SimpleProfileEditorModal from './SimpleProfileEditorModal';
 import './SubscriptionCard.css';
 
 interface Props {
@@ -19,18 +20,34 @@ const ProfileItem = React.memo(({ profile }: { profile: Profile }) => {
   const toggleChainProfileId = useAppStore(state => state.toggleChainProfileId);
   const pingDisplayStyle = useAppStore(state => state.pingDisplayStyle);
   const startPing = useAppStore(state => state.startPing);
+  const updateProfileConfigJson = useAppStore(state => state.updateProfileConfigJson);
+  const addNotification = useAppStore(state => state.addNotification);
   const pingRes = useAppStore(state => 
     state.pingedProfileIds.has(profile.id) ? state.pingResults[profile.id] : undefined
   );
   const { t } = useTranslation();
 
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const [isJsonModalOpen, setIsJsonModalOpen] = useState(false);
+  const [isSimpleModalOpen, setIsSimpleModalOpen] = useState(false);
+  const [jsonText, setJsonText] = useState('');
+  const [jsonError, setJsonError] = useState('');
   const contextMenuRef = useRef<HTMLDivElement>(null);
 
   const chainIndex = chainProfileIds.indexOf(profile.id);
   const inChain = chainIndex !== -1;
+  const isJsonProfile = profile.uri === 'internal://json';
 
   const protocolDisplay = useMemo(() => getProtocolDisplay(profile), [profile]);
+
+  useEffect(() => {
+    if (isJsonModalOpen || isSimpleModalOpen) {
+      document.body.classList.add('modal-open');
+    } else {
+      document.body.classList.remove('modal-open');
+    }
+    return () => document.body.classList.remove('modal-open');
+  }, [isJsonModalOpen, isSimpleModalOpen]);
 
   useEffect(() => {
     const handleCloseOtherMenus = (e: Event) => {
@@ -70,6 +87,31 @@ const ProfileItem = React.memo(({ profile }: { profile: Profile }) => {
     setContextMenu({ x: posX, y: posY });
   };
 
+  const handleOpenJsonModal = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    let initialJson = profile.config_json || '{}';
+    try {
+      initialJson = JSON.stringify(JSON.parse(initialJson), null, 2);
+    } catch {
+
+    }
+    setJsonText(initialJson);
+    setJsonError('');
+    setIsJsonModalOpen(true);
+  };
+
+  const handleSaveJson = () => {
+    try {
+      JSON.parse(jsonText);
+    } catch (err: any) {
+      setJsonError(`${t('subscriptionCard.jsonInvalid')}: ${err.message}`);
+      return;
+    }
+    updateProfileConfigJson(profile.id, jsonText);
+    addNotification('success', t('subscriptionCard.profileUpdated'), 3);
+    setIsJsonModalOpen(false);
+  };
+
   return (
     <>
       <div 
@@ -105,7 +147,70 @@ const ProfileItem = React.memo(({ profile }: { profile: Profile }) => {
             )}
           </div>
         )}
+        <button 
+          className="profile-arrow-btn"
+          title={isJsonProfile ? t('subscriptionCard.jsonEditor') : t('simpleEditor.title')}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (isJsonProfile) {
+              handleOpenJsonModal(e);
+            } else {
+              setIsSimpleModalOpen(true);
+            }
+          }}
+        >
+          <ChevronRight size={16} />
+        </button>
       </div>
+
+      {isSimpleModalOpen && createPortal(
+        <SimpleProfileEditorModal 
+          profile={profile} 
+          onClose={() => setIsSimpleModalOpen(false)} 
+        />,
+        document.body
+      )}
+
+      {isJsonModalOpen && createPortal(
+        <div 
+          className="json-modal-overlay" 
+          onClick={(e) => { if (e.target === e.currentTarget) setIsJsonModalOpen(false); }}
+        >
+          <div className="json-modal-content">
+            <div className="json-modal-header">
+              <h2>{t('subscriptionCard.jsonEditor')}</h2>
+            </div>
+            <div className="json-modal-body">
+              <textarea
+                className="json-modal-textarea"
+                value={jsonText}
+                onChange={(e) => {
+                  setJsonText(e.target.value);
+                  if (jsonError) setJsonError('');
+                }}
+                placeholder="{\n  ...\n}"
+                spellCheck={false}
+              />
+              {jsonError && <div className="json-modal-error">{jsonError}</div>}
+            </div>
+            <div className="json-modal-actions">
+              <button 
+                className="json-modal-btn cancel" 
+                onClick={() => setIsJsonModalOpen(false)}
+              >
+                {t('subscriptionCard.cancel')}
+              </button>
+              <button 
+                className="json-modal-btn save" 
+                onClick={handleSaveJson}
+              >
+                {t('subscriptionCard.save')}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {contextMenu && createPortal(
         <div 
@@ -176,6 +281,15 @@ export default function SubscriptionCard({ subscription, isExpanded, onToggle }:
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [menuOpen]);
+
+  useEffect(() => {
+    if (isEditModalOpen) {
+      document.body.classList.add('modal-open');
+    } else {
+      document.body.classList.remove('modal-open');
+    }
+    return () => document.body.classList.remove('modal-open');
+  }, [isEditModalOpen]);
 
   const handleOpenEditModal = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -322,12 +436,7 @@ export default function SubscriptionCard({ subscription, isExpanded, onToggle }:
         )}
       </div>
 
-      <div 
-        className={`profiles-list-wrapper ${isExpanded ? 'expanded' : ''}`}
-        style={{
-          maxHeight: isExpanded ? `${subscription.profiles.length * 60 + 50}px` : '0px'
-        }}
-      >
+      <div className={`profiles-list-wrapper ${isExpanded ? 'expanded' : ''}`}>
         <div className="profiles-list-inner">
           <div className="profiles-list">
             {subscription.profiles.map(profile => (

@@ -26,9 +26,7 @@
 .notification-item {
   width: 100%;
   box-sizing: border-box;
-  background: var(--bg-header-glass, rgba(32, 32, 38, 0.85));
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: var(--bg-header-glass, rgba(32, 32, 38, 0.95));
   border: 1px solid var(--border-header-glass, rgba(255, 255, 255, 0.10));
   border-radius: var(--border-radius-md);
   position: relative;
@@ -44,7 +42,7 @@
               box-shadow 0.3s ease;
 }
 
-/* Stacked mode positioning */
+
 .notification-container.is-stacked .stack-index-0 {
   margin-top: 0;
   transform: translateY(0) scale(1);
@@ -68,7 +66,7 @@
   filter: brightness(0.7);
 }
 
-/* Hover preview effect when stacked */
+
 .notification-container.is-stacked:hover .stack-index-0 {
   transform: translateY(-3px) scale(1.01);
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
@@ -82,7 +80,7 @@
   transform: translateY(18px) scale(0.91);
 }
 
-/* Expanded mode positioning - smooth unfolding downward with 10px spacing */
+
 .notification-container.is-expanded .notification-item {
   margin-top: 10px;
   transform: translateY(0) scale(1);

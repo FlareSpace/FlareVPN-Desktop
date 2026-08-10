@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useAppStore } from '../store/useAppStore';
 import { ChevronRight, Check, Search, RefreshCw, Loader2, AppWindow, ArrowLeft, Plus } from 'lucide-react';
@@ -33,7 +34,7 @@ export default function BasicSettingsTab() {
   );
   const [inputValue, setInputValue] = useState('');
 
-  // Process Selector states
+
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [runningProcesses, setRunningProcesses] = useState<ProcessItem[]>([]);
   const [isLoadingProcesses, setIsLoadingProcesses] = useState(false);
@@ -64,6 +65,15 @@ export default function BasicSettingsTab() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (isModalOpen) {
+      document.body.classList.add('modal-open');
+    } else {
+      document.body.classList.remove('modal-open');
+    }
+    return () => document.body.classList.remove('modal-open');
+  }, [isModalOpen]);
 
   const handleOpenModal = () => {
     const apps = settings.split_tunneling_apps || [];
@@ -206,7 +216,7 @@ export default function BasicSettingsTab() {
         </div>
       </div>
 
-      {isModalOpen && (
+      {isModalOpen && createPortal(
         <div 
           className="modal-overlay" 
           onClick={(e) => { if (e.target === e.currentTarget) setIsModalOpen(false); }}
@@ -464,7 +474,8 @@ export default function BasicSettingsTab() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

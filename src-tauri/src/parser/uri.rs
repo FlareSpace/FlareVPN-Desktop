@@ -17,6 +17,10 @@ pub fn parse_single_uri_to_xray(uri_str: &str) -> Result<Value, String> {
         return parse_hysteria(clean_uri);
     } else if clean_uri.starts_with("hysteria2://") || clean_uri.starts_with("hy2://") {
         return parse_hysteria2(clean_uri);
+    } else if clean_uri.starts_with("wireguard://") || clean_uri.starts_with("wg://") {
+        return parse_wireguard(clean_uri);
+    } else if clean_uri.starts_with("tuic://") {
+        return parse_tuic(clean_uri);
     }
 
     Err("Unsupported protocol URI".to_string())
@@ -377,6 +381,79 @@ fn parse_hysteria2(uri_str: &str) -> Result<Value, String> {
     
     if let Some(sni) = params.get("sni").or_else(|| params.get("peer")) { ob.insert("server_name".to_string(), json!(sni)); }
     
+    Ok(Value::Object(ob))
+}
+
+fn parse_tuic(uri_str: &str) -> Result<Value, String> {
+    let parsed = Url::parse(uri_str).map_err(|e| e.to_string())?;
+    let params = parse_query(parsed.query());
+
+    let host = parsed.host_str().unwrap_or("");
+    let port = parsed.port().unwrap_or(8443);
+    let uuid = parsed.username().to_string();
+    let password = parsed.password().unwrap_or(params.get("password").map(|s| s.as_str()).unwrap_or("")).to_string();
+
+    let mut ob = Map::new();
+    ob.insert("protocol".to_string(), json!("tuic"));
+    ob.insert("tag".to_string(), json!("proxy"));
+    ob.insert("server".to_string(), json!(host));
+    ob.insert("server_port".to_string(), json!(port));
+    ob.insert("uuid".to_string(), json!(uuid));
+    ob.insert("password".to_string(), json!(password));
+
+    if let Some(cc) = params.get("congestion_control").or_else(|| params.get("congestion-control")) {
+        ob.insert("congestion_control".to_string(), json!(cc));
+    }
+    if let Some(urm) = params.get("udp_relay_mode").or_else(|| params.get("udp-relay-mode")) {
+        ob.insert("udp_relay_mode".to_string(), json!(urm));
+    }
+
+    let mut stream_params = params.clone();
+    if !stream_params.contains_key("security") {
+        stream_params.insert("security".to_string(), "tls".to_string());
+    }
+    ob.insert("streamSettings".to_string(), build_stream_settings(host, &stream_params));
+
+    Ok(Value::Object(ob))
+}
+
+fn parse_wireguard(uri_str: &str) -> Result<Value, String> {
+    let parsed = Url::parse(uri_str).map_err(|e| e.to_string())?;
+    let params = parse_query(parsed.query());
+
+    let private_key = url::form_urlencoded::parse(parsed.username().as_bytes()).map(|(k, _)| k.to_string()).collect::<Vec<_>>().join("");
+    let host = parsed.host_str().unwrap_or("");
+    let port = parsed.port().unwrap_or(51820);
+
+    let public_key = params.get("publickey")
+        .or_else(|| params.get("public-key"))
+        .or_else(|| params.get("peer_public_key"))
+        .or_else(|| params.get("peer-public-key"))
+        .cloned()
+        .unwrap_or_default();
+
+    let local_address = params.get("address")
+        .or_else(|| params.get("local_address"))
+        .or_else(|| params.get("local-address"))
+        .cloned()
+        .unwrap_or_else(|| "10.7.0.2/32".to_string());
+
+    let mut ob = Map::new();
+    ob.insert("protocol".to_string(), json!("wireguard"));
+    ob.insert("tag".to_string(), json!("proxy"));
+    ob.insert("server".to_string(), json!(host));
+    ob.insert("server_port".to_string(), json!(port));
+    ob.insert("private_key".to_string(), json!(private_key));
+    ob.insert("public_key".to_string(), json!(public_key));
+    ob.insert("local_address".to_string(), json!(local_address));
+
+    if let Some(psk) = params.get("presharedkey").or_else(|| params.get("pre_shared_key")) {
+        ob.insert("pre_shared_key".to_string(), json!(psk));
+    }
+    if let Some(mtu) = params.get("mtu").and_then(|m| m.parse::<i64>().ok()) {
+        ob.insert("mtu".to_string(), json!(mtu));
+    }
+
     Ok(Value::Object(ob))
 }
 

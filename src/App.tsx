@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import TitleBar from './components/TitleBar';
+import ResizeBorders from './components/ResizeBorders';
 import Sidebar from './components/Sidebar';
 import { listen } from '@tauri-apps/api/event';
 import { invoke } from '@tauri-apps/api/core';
@@ -24,6 +25,14 @@ import './i18n';
 
 function App() {
   const { i18n, t } = useTranslation();
+
+
+  useEffect(() => {
+    const isLinux = navigator.userAgent.includes('Linux') || navigator.platform.includes('Linux');
+    if (isLinux) {
+      document.documentElement.setAttribute('data-platform', 'linux');
+    }
+  }, []);
   const language = useAppStore(state => state.language);
   const subscriptions = useAppStore(state => state.subscriptions);
   const activeTab = useAppStore(state => state.activeTab);
@@ -171,6 +180,7 @@ function App() {
 
   return (
     <div className="app-container">
+      <ResizeBorders />
       <TitleBar />
       <NotificationContainer />
       <div className="main-layout">

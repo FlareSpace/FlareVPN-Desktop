@@ -4,13 +4,17 @@ interface FireworkCanvasProps {
   status: string;
 }
 
+const rgbCache: Record<string, { r: number; g: number; b: number }> = {};
 function hexToRgb(hex: string) {
+  if (rgbCache[hex]) return rgbCache[hex];
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return result ? {
+  const rgb = result ? {
     r: parseInt(result[1], 16),
     g: parseInt(result[2], 16),
     b: parseInt(result[3], 16)
   } : {r: 255, g: 255, b: 255};
+  rgbCache[hex] = rgb;
+  return rgb;
 }
 
 function rgbaStr(r: number, g: number, b: number, a: number) {
@@ -301,11 +305,12 @@ export default function FireworkCanvas({ status }: FireworkCanvasProps) {
         position: 'absolute',
         top: '50%',
         left: '50%',
-        transform: 'translate(-50%, -50%)',
+        transform: 'translate3d(-50%, -50%, 0)',
         width: '400px',
         height: '400px',
         pointerEvents: 'none',
-        zIndex: 0
+        zIndex: 0,
+        willChange: 'transform'
       }}
     />
   );

@@ -1,0 +1,88 @@
+.animated-value-container {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  position: relative;
+  height: 24px;
+  overflow: hidden;
+  vertical-align: middle;
+  gap: 4px;
+}
+
+.animated-value-prefix,
+.animated-value-suffix {
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+  user-select: none;
+  z-index: 1;
+}
+
+.animated-value-suffix {
+  margin-left: 2px;
+}
+
+.animated-value-digits-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  height: 24px;
+}
+
+.digit-slot {
+  position: relative;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  min-width: 9px;
+}
+
+.digit-placeholder {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+}
+
+.digit-text {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+  line-height: 24px;
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+  will-change: transform, opacity;
+}
+
+.digit-text.slide-in {
+  animation: value-slide-in-top 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.digit-text.slide-out {
+  animation: value-slide-out-bottom 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes value-slide-in-top {
+  0% {
+    transform: translate(-50%, -24px);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}
+
+@keyframes value-slide-out-bottom {
+  0% {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, 24px);
+    opacity: 0;
+  }
+}

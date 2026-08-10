@@ -127,7 +127,10 @@ fn is_proxy_uri(s: &str) -> bool {
     s_lower.starts_with("hysteria://") ||
     s_lower.starts_with("hy://") ||
     s_lower.starts_with("hysteria2://") ||
-    s_lower.starts_with("hy2://")
+    s_lower.starts_with("hy2://") ||
+    s_lower.starts_with("wireguard://") ||
+    s_lower.starts_with("wg://") ||
+    s_lower.starts_with("tuic://")
 }
 
 fn parse_multiple_uris(lines: &[&str]) -> Result<Vec<Profile>, String> {

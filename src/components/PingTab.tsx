@@ -3,6 +3,7 @@ import { Link, Zap, ChevronRight, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAppStore, PingDisplayStyle } from '../store/useAppStore';
 import { CloudFilled } from './icons';
+import AnimatedValueText from './AnimatedValueText';
 import './PingTab.css';
 
 export default function PingTab() {
@@ -154,7 +155,7 @@ export default function PingTab() {
               onChange={(e) => setPingTimeout(parseInt(e.target.value))}
               style={{ '--slider-value': `${((pingTimeout - 1) / 19) * 100}%` } as React.CSSProperties}
             />
-            <span className="ping-slider-value">{t('pingTab.sec', { sec: pingTimeout })}</span>
+            <AnimatedValueText value={pingTimeout} suffix={t('pingTab.sec', { sec: '' }).trim()} className="ping-slider-value" />
           </div>
         </div>
       </div>

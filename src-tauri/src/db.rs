@@ -1,7 +1,6 @@
 use rusqlite::{params, Connection, Result};
 use std::sync::Mutex;
 use serde::{Deserialize, Serialize};
-use std::process::Command;
 use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -107,11 +106,11 @@ impl Default for AppSettings {
     }
 }
 
-/// Returns a stable machine identifier, or a fresh UUID as fallback.
-/// Uses platform-specific sources:
-///   Windows — HKLM\SOFTWARE\Microsoft\Cryptography\MachineGuid (registry)
-///   Linux   — /etc/machine-id
-///   macOS   — IOPlatformSerialNumber via ioreg
+
+
+
+
+
 #[cfg(target_os = "windows")]
 fn get_real_hwid_or_generate() -> String {
     use std::os::windows::process::CommandExt;
@@ -163,7 +162,7 @@ fn get_real_hwid_or_generate() -> String {
         let stdout = String::from_utf8_lossy(&output.stdout);
         for line in stdout.lines() {
             if line.contains("IOPlatformSerialNumber") {
-                // Format: "IOPlatformSerialNumber" = "XXXXXXXXXX"
+
                 if let Some(start) = line.rfind('"') {
                     let after = &line[..start];
                     if let Some(end) = after.rfind('"') {

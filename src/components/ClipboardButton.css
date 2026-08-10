@@ -29,7 +29,6 @@
   white-space: nowrap;
   padding: 10px 16px;
   border-radius: 12px;
-  backdrop-filter: blur(8px);
 }
 
 .clipboard-button:hover {

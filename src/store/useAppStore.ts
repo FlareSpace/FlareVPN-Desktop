@@ -139,6 +139,8 @@ interface AppState {
   updateSubscription: (id: string) => Promise<void>;
   updateSubscriptionDetails: (id: string, name: string, urlOrBase64: string) => Promise<void>;
   removeSubscription: (id: string) => Promise<void>;
+  updateProfileConfigJson: (profileId: string, newConfigJson: string) => void;
+  updateProfileDetails: (profileId: string, updatedFields: Partial<Profile>) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -221,6 +223,50 @@ export const useAppStore = create<AppState>()(
           return s;
         })
       })),
+      updateProfileConfigJson: (profileId, newConfigJson) => {
+        set((state) => ({
+          subscriptions: state.subscriptions.map((sub) => ({
+            ...sub,
+            profiles: sub.profiles.map((p) => {
+              if (p.id === profileId) {
+                const updated = { ...p, config_json: newConfigJson };
+                try {
+                  const parsed = JSON.parse(newConfigJson);
+                  if (parsed.remarks) updated.name = parsed.remarks;
+                  else if (parsed.tag) updated.name = parsed.tag;
+                  if (parsed.outbounds && parsed.outbounds[0]?.type) {
+                    updated.protocol = parsed.outbounds[0].type;
+                  }
+                } catch (e) {
+
+                }
+                return updated;
+              }
+              return p;
+            }),
+          })),
+        }));
+
+        const state = get();
+        const isActiveProfile = state.selectedProfileId === profileId || state.chainProfileIds.includes(profileId);
+        const isConnected = state.status === 'connected' || state.status === 'connecting';
+        if (isActiveProfile && isConnected) {
+          get().reconnectVpn();
+        }
+      },
+      updateProfileDetails: (profileId, updatedFields) => {
+        set((state) => ({
+          subscriptions: state.subscriptions.map((sub) => ({
+            ...sub,
+            profiles: sub.profiles.map((p) => {
+              if (p.id === profileId) {
+                return { ...p, ...updatedFields };
+              }
+              return p;
+            }),
+          })),
+        }));
+      },
       setSelectedProfileId: (id) => {
         const state = get();
         if (state.selectedProfileId === id) return;
@@ -503,7 +549,7 @@ export const useAppStore = create<AppState>()(
                 const appsMode = state.settings.split_tunneling_apps_mode || state.settings.split_tunneling_mode || 'whitelist';
                 const domainsMode = state.settings.split_tunneling_domains_mode || state.settings.split_tunneling_mode || 'whitelist';
 
-                // 1. Whitelist rules (proxy) unshifted first
+
                 if (hasProcessRules && appsMode === 'whitelist') {
                   const appRule: any = { outbound: primaryProxyTag };
                   if (processNames.size > 0) appRule.process_name = Array.from(processNames);
@@ -524,7 +570,7 @@ export const useAppStore = create<AppState>()(
                   }
                 }
 
-                // 2. Blacklist rules (direct) unshifted second (placed above whitelist rules)
+
                 if (hasProcessRules && appsMode === 'blacklist') {
                   const appRule: any = { outbound: 'direct' };
                   if (processNames.size > 0) appRule.process_name = Array.from(processNames);
@@ -545,7 +591,7 @@ export const useAppStore = create<AppState>()(
                   }
                 }
 
-                // If either apps or domains are in whitelist mode, fallback route for non-matching traffic is direct
+
                 if ((hasProcessRules && appsMode === 'whitelist') || (hasDomainRules && domainsMode === 'whitelist')) {
                   parsedConfig.route.final = 'direct';
                 }

@@ -101,7 +101,7 @@ export default function NotificationContainer() {
     }
   };
 
-  // Reverse so newest notification is at the top of the stack (stackIndex 0)
+
   const reversedNotifications = [...notifications].reverse();
 
   return (

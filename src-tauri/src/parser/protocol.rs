@@ -822,3 +822,74 @@ fn sanitize_sni(sni: &str) -> String {
     }
     clean.to_string()
 }
+
+pub fn convert_wireguard(xray_ob: &Value, sb_ob: &mut Map<String, Value>) {
+    sb_ob.insert("type".to_string(), json!("wireguard"));
+    
+    if let Some(server) = xray_ob.get("server") {
+        sb_ob.insert("server".to_string(), server.clone());
+    }
+    if let Some(port) = xray_ob.get("server_port") {
+        sb_ob.insert("server_port".to_string(), port.clone());
+    }
+    if let Some(pk) = xray_ob.get("private_key") {
+        sb_ob.insert("private_key".to_string(), pk.clone());
+    }
+    if let Some(pubk) = xray_ob.get("public_key") {
+        sb_ob.insert("peer_public_key".to_string(), pubk.clone());
+    }
+    if let Some(addr) = xray_ob.get("local_address") {
+        if let Some(s) = addr.as_str() {
+            let addrs: Vec<&str> = s.split(',').map(|a| a.trim()).filter(|a| !a.is_empty()).collect();
+            sb_ob.insert("local_address".to_string(), json!(addrs));
+        } else if addr.is_array() {
+            sb_ob.insert("local_address".to_string(), addr.clone());
+        }
+    }
+    if let Some(psk) = xray_ob.get("pre_shared_key") {
+        sb_ob.insert("pre_shared_key".to_string(), psk.clone());
+    }
+    if let Some(mtu) = xray_ob.get("mtu") {
+        sb_ob.insert("mtu".to_string(), mtu.clone());
+    }
+}
+
+pub fn convert_tuic(xray_ob: &Value, sb_ob: &mut Map<String, Value>) {
+    sb_ob.insert("type".to_string(), json!("tuic"));
+    
+    if let Some(server) = xray_ob.get("server") {
+        sb_ob.insert("server".to_string(), server.clone());
+    }
+    if let Some(port) = xray_ob.get("server_port") {
+        sb_ob.insert("server_port".to_string(), port.clone());
+    }
+    if let Some(uuid) = xray_ob.get("uuid") {
+        sb_ob.insert("uuid".to_string(), uuid.clone());
+    }
+    if let Some(pass) = xray_ob.get("password") {
+        sb_ob.insert("password".to_string(), pass.clone());
+    }
+    if let Some(cc) = xray_ob.get("congestion_control") {
+        sb_ob.insert("congestion_control".to_string(), cc.clone());
+    }
+    if let Some(urm) = xray_ob.get("udp_relay_mode") {
+        sb_ob.insert("udp_relay_mode".to_string(), urm.clone());
+    }
+    
+    if let Some(stream_settings) = xray_ob.get("streamSettings") {
+        convert_stream_settings(stream_settings, sb_ob);
+    }
+    
+    if !sb_ob.contains_key("tls") {
+        let mut tls = Map::new();
+        tls.insert("enabled".to_string(), json!(true));
+        if let Some(server) = xray_ob.get("server").and_then(|s| s.as_str()) {
+            if !server.is_empty() {
+                tls.insert("server_name".to_string(), json!(server));
+            }
+        }
+        sb_ob.insert("tls".to_string(), json!(tls));
+    }
+}
+
+

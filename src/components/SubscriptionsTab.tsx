@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAppStore } from '../store/useAppStore';
+import AnimatedValueText from './AnimatedValueText';
 import './SubscriptionsTab.css';
 
 export default function SubscriptionsTab() {
@@ -118,7 +119,7 @@ export default function SubscriptionsTab() {
                   className="range-slider"
                   style={{ '--slider-value': `${((localTimeout - 1) / 24) * 100}%` } as React.CSSProperties}
                 />
-                <span className="slider-value">{t('pingTab.sec', { sec: localTimeout })}</span>
+                <AnimatedValueText value={localTimeout} suffix={t('pingTab.sec', { sec: '' }).trim()} className="slider-value" />
               </div>
             </div>
           </div>

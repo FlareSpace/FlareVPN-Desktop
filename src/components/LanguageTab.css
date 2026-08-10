@@ -16,8 +16,6 @@
   width: 100%;
   padding: 24px;
   background: var(--bg-header-glass);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border-header-glass);
 }
 
@@ -102,8 +100,6 @@
   right: 0;
   min-width: 170px;
   background: var(--context-menu-bg, rgba(26, 26, 32, 0.95));
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
   border: 1px solid var(--context-menu-border, rgba(255, 255, 255, 0.12));
   border-radius: 16px;
   padding: 6px;

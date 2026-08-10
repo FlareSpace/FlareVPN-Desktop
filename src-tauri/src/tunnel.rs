@@ -84,9 +84,9 @@ async fn cleanup_stale_tun_bindings() {
 }
 
 async fn stop_child_process_gracefully(child: CommandChild) {
-    let pid = child.pid();
     #[cfg(target_os = "windows")]
     {
+        let pid = child.pid();
         const CREATE_NO_WINDOW: u32 = 0x08000000;
 
         let mut soft_kill = tokio::process::Command::new("taskkill");

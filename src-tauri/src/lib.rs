@@ -176,16 +176,43 @@ async fn ping_profile_direct(
     .map_err(|e| e.to_string())
 }
 
+#[cfg(target_os = "linux")]
+pub fn apply_kde_blur_gtk(gtk_win: &gtk::ApplicationWindow) {
+    use gtk::prelude::*;
+    if let Some(gdk_win) = gtk_win.window() {
+        let atom = gdk::Atom::intern("_KDE_NET_WM_BLUR_BEHIND_REGION");
+        gdk::property_change(
+            &gdk_win,
+            &atom,
+            &gdk::Atom::intern("CARDINAL"),
+            32,
+            gdk::PropMode::Replace,
+            gdk::ChangeData::ULongs(&[0]),
+        );
+    }
+}
+
+#[cfg(target_os = "linux")]
+pub fn ensure_linux_blur(window: &tauri::WebviewWindow) {
+    if let Ok(gtk_win) = window.gtk_window() {
+        apply_kde_blur_gtk(&gtk_win);
+    }
+}
+
+#[cfg(target_os = "linux")]
+pub fn ensure_linux_blur_window(window: &tauri::Window) {
+    if let Ok(gtk_win) = window.gtk_window() {
+        apply_kde_blur_gtk(&gtk_win);
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     #[cfg(target_os = "linux")]
     {
-        // Fix for WebKitGTK 2.42+ surfaceless EGL display allocation failure (EGL_BAD_ALLOC) and AppImage sandbox
-        if std::env::var("WEBKIT_DISABLE_DMABUF_RENDERER").is_err() {
-            std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
-        }
-        if std::env::var("WEBKIT_FORCE_SANDBOX").is_err() {
-            std::env::set_var("WEBKIT_FORCE_SANDBOX", "0");
+
+        if std::env::var("WEBKIT_GPU_POLICY").is_err() {
+            std::env::set_var("WEBKIT_GPU_POLICY", "always");
         }
     }
 
@@ -213,6 +240,35 @@ pub fn run() {
                 {
                     if window_vibrancy::apply_acrylic(&window, Some((18, 18, 18, 204))).is_err() {
                         let _ = window_vibrancy::apply_mica(&window, Some(true));
+                    }
+                }
+                #[cfg(target_os = "linux")]
+                {
+                    use gtk::prelude::*;
+                    if let Ok(gtk_win) = window.gtk_window() {
+                        if let Some(screen) = gdk::Screen::default() {
+                            if let Some(visual) = screen.rgba_visual() {
+                                gtk_win.set_visual(Some(&visual));
+                            }
+                        }
+                        gtk_win.set_app_paintable(true);
+
+                        if gtk_win.is_realized() {
+                            apply_kde_blur_gtk(&gtk_win);
+                        }
+                        gtk_win.connect_realize(move |win| {
+                            apply_kde_blur_gtk(win);
+                        });
+                        gtk_win.connect_map(move |win| {
+                            apply_kde_blur_gtk(win);
+                        });
+                        gtk_win.connect_show(move |win| {
+                            apply_kde_blur_gtk(win);
+                        });
+                        gtk_win.connect_window_state_event(move |win, _| {
+                            apply_kde_blur_gtk(win);
+                            gtk::glib::Propagation::Proceed
+                        });
                     }
                 }
             }
@@ -256,6 +312,8 @@ pub fn run() {
                         if let Some(window) = app.get_webview_window("main") {
                             let _ = window.show();
                             let _ = window.set_focus();
+                            #[cfg(target_os = "linux")]
+                            ensure_linux_blur(&window);
                         }
                     }
                     "connect" => {
@@ -274,6 +332,8 @@ pub fn run() {
                         if let Some(window) = app.get_webview_window("main") {
                             let _ = window.show();
                             let _ = window.set_focus();
+                            #[cfg(target_os = "linux")]
+                            ensure_linux_blur(&window);
                         }
                     }
                 })
@@ -284,6 +344,10 @@ pub fn run() {
             WindowEvent::CloseRequested { api, .. } => {
                 window.hide().unwrap();
                 api.prevent_close();
+            }
+            #[cfg(target_os = "linux")]
+            WindowEvent::Focused(true) => {
+                ensure_linux_blur_window(window);
             }
             _ => {}
         })

@@ -1,8 +1,6 @@
 .titlebar {
   height: 30px;
   background: var(--bg-header-glass);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border-header-glass);
   user-select: none;
   display: flex;
