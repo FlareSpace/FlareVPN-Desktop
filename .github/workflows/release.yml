@@ -52,7 +52,9 @@ jobs:
             libayatana-appindicator3-dev \
             librsvg2-dev \
             patchelf \
-            libcap2-bin
+            libcap2-bin \
+            libarchive-tools \
+            zstd
 
       - name: Install frontend dependencies
         run: npm ci
@@ -71,3 +73,63 @@ jobs:
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
+
+      - name: Build and upload Arch Linux package (.pkg.tar.zst)
+        if: matrix.platform == 'ubuntu-22.04'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          DEB_FILE=$(find src-tauri/target/release/bundle/deb -name "*.deb" 2>/dev/null | head -n 1)
+
+          if [ -z "$DEB_FILE" ]; then
+            echo "Error: .deb package not found in src-tauri/target/release/bundle/deb"
+            exit 1
+          fi
+
+          BUILD_DIR=$(mktemp -d)
+          dpkg-deb -x "$DEB_FILE" "$BUILD_DIR"
+
+          cat << EOF | sed 's/^[ \t]*//' > "$BUILD_DIR/.PKGINFO"
+          pkgname = flarevpn
+          pkgver = ${VERSION}-1
+          pkgdesc = Flare VPN Desktop application
+          url = https://github.com/${{ github.repository }}
+          arch = x86_64
+          license = MIT
+          depend = webkit2gtk-4.1
+          depend = gtk3
+          depend = curl
+          depend = wget
+          depend = libcap
+          depend = libayatana-appindicator
+          EOF
+
+          cat << 'EOF' | sed 's/^[ \t]*//' > "$BUILD_DIR/.INSTALL"
+          post_install() {
+              for file in /usr/lib/flarevpn/sing-box*; do
+                  if [ -f "$file" ]; then
+                      setcap 'cap_net_admin,cap_net_raw+ep' "$file" || true
+                  fi
+              done
+
+              if [ -f "/usr/bin/flarevpn" ]; then
+                  setcap 'cap_net_admin,cap_net_raw+ep' "/usr/bin/flarevpn" || true
+              fi
+          }
+
+          post_upgrade() {
+              post_install
+          }
+          EOF
+
+          PKG_NAME="flarevpn_${VERSION}_x86_64.pkg.tar.zst"
+          bsdtar --uid 0 --gid 0 -c -f - -C "$BUILD_DIR" .PKGINFO .INSTALL usr | zstd -z -19 -T0 > "$PKG_NAME"
+
+          TAG_NAME="${{ github.ref_name }}"
+          if [[ ! "$TAG_NAME" =~ ^v ]]; then
+            TAG_NAME="v${VERSION}"
+          fi
+
+          echo "Uploading $PKG_NAME to release $TAG_NAME..."
+          gh release upload "$TAG_NAME" "$PKG_NAME" --clobber
