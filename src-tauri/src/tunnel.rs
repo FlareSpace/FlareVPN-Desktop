@@ -121,20 +121,51 @@ async fn stop_child_process_gracefully(child: CommandChild) {
 }
 
 #[cfg(target_os = "linux")]
-pub fn ensure_sidecar_executable_linux() {
+pub fn ensure_sidecar_executable_linux(app: &AppHandle) {
     use std::os::unix::fs::PermissionsExt;
-    let candidate_paths = [
-        "/usr/bin/sing-box",
-        "/usr/bin/sing-box-x86_64-unknown-linux-gnu",
-        "/usr/lib/flare-vpn/sing-box",
-        "/usr/lib/com.flare.vpn/sing-box",
+    use std::process::Command;
+
+    let mut candidate_paths = vec![
+        PathBuf::from("/usr/bin/sing-box"),
+        PathBuf::from("/usr/bin/sing-box-x86_64-unknown-linux-gnu"),
+        PathBuf::from("/usr/lib/flare-vpn/sing-box"),
+        PathBuf::from("/usr/lib/com.flare.vpn/sing-box"),
     ];
-    for path in &candidate_paths {
-        if let Ok(metadata) = std::fs::metadata(path) {
-            let mut perm = metadata.permissions();
-            if perm.mode() & 0o111 == 0 {
-                perm.set_mode(0o755);
-                let _ = std::fs::set_permissions(path, perm);
+
+    if let Ok(resource_dir) = app.path().resource_dir() {
+        candidate_paths.push(resource_dir.join("sing-box"));
+        candidate_paths.push(resource_dir.join("sing-box-x86_64-unknown-linux-gnu"));
+        candidate_paths.push(resource_dir.join("bin/sing-box-x86_64-unknown-linux-gnu"));
+    }
+
+    if let Ok(cwd) = std::env::current_dir() {
+        candidate_paths.push(cwd.join("src-tauri/bin/sing-box-x86_64-unknown-linux-gnu"));
+        candidate_paths.push(cwd.join("bin/sing-box-x86_64-unknown-linux-gnu"));
+    }
+
+    for path in candidate_paths {
+        if path.is_file() {
+            if let Ok(metadata) = std::fs::metadata(&path) {
+                let mut perm = metadata.permissions();
+                if perm.mode() & 0o111 == 0 {
+                    perm.set_mode(0o755);
+                    let _ = std::fs::set_permissions(&path, perm);
+                }
+            }
+
+            let path_str = path.to_string_lossy().to_string();
+            let has_cap = match Command::new("getcap").arg(&path_str).output() {
+                Ok(out) => {
+                    let stdout = String::from_utf8_lossy(&out.stdout);
+                    stdout.contains("cap_net_admin")
+                }
+                Err(_) => false,
+            };
+
+            if !has_cap {
+                let _ = Command::new("pkexec")
+                    .args(["setcap", "cap_net_admin,cap_net_raw+ep", &path_str])
+                    .status();
             }
         }
     }
@@ -193,7 +224,7 @@ pub async fn start_tunnel(app: AppHandle, config_json: String) -> Result<(), Str
     }
 
     #[cfg(target_os = "linux")]
-    ensure_sidecar_executable_linux();
+    ensure_sidecar_executable_linux(&app);
 
     let sidecar_command = app
         .shell()
