@@ -174,21 +174,84 @@ pub fn ensure_sidecar_executable_linux(app: &AppHandle) {
     }
 
     let path_str = path.to_string_lossy().to_string();
-    let has_cap = match Command::new("getcap").arg(&path_str).output() {
+    
+    let has_cap = match Command::new("sh")
+        .args(["-c", &format!("getcap '{}' || /sbin/getcap '{}' || /usr/sbin/getcap '{}'", path_str, path_str, path_str)])
+        .output()
+    {
         Ok(out) => {
             let stdout = String::from_utf8_lossy(&out.stdout);
-            stdout.contains("cap_net_admin")
+            stdout.contains("cap_net_admin") && stdout.contains("cap_sys_ptrace") && stdout.contains("cap_dac_read_search")
         }
         Err(_) => false,
     };
 
-    if has_cap {
+    let app_data_dir = app.path().app_data_dir().unwrap_or_else(|_| std::path::PathBuf::from("/tmp"));
+    let marker_path = app_data_dir.join("polkit_v3_installed");
+
+    if has_cap && marker_path.exists() {
         return;
     }
 
-    let _ = Command::new("pkexec")
-        .args(["setcap", "cap_net_admin,cap_net_raw+ep", &path_str])
-        .status();
+    let temp_dir = std::env::temp_dir();
+    let setup_script_path = temp_dir.join(format!("flarevpn_setup_{}.sh", uuid::Uuid::new_v4()));
+    
+    let script_content = format!(
+        r#"#!/bin/sh
+set -e
+
+TARGET="{}"
+
+if command -v setcap >/dev/null 2>&1; then
+    setcap 'cap_net_admin,cap_net_raw,cap_sys_ptrace,cap_dac_read_search+ep' "$TARGET"
+elif [ -x /sbin/setcap ]; then
+    /sbin/setcap 'cap_net_admin,cap_net_raw,cap_sys_ptrace,cap_dac_read_search+ep' "$TARGET"
+elif [ -x /usr/sbin/setcap ]; then
+    /usr/sbin/setcap 'cap_net_admin,cap_net_raw,cap_sys_ptrace,cap_dac_read_search+ep' "$TARGET"
+else
+    echo "setcap not found"
+    exit 1
+fi
+
+if [ -d "/etc/polkit-1/rules.d" ]; then
+    cat << 'EOF' > /etc/polkit-1/rules.d/10-flarevpn-resolved.rules
+polkit.addRule(function(action, subject) {{
+    if ((action.id.indexOf("org.freedesktop.resolve1.") == 0 || 
+         action.id.indexOf("org.freedesktop.network1.") == 0 ||
+         action.id.indexOf("org.freedesktop.NetworkManager.") == 0) && 
+        (subject.local || subject.isInGroup("wheel") || subject.isInGroup("network"))) {{
+        return polkit.Result.YES;
+    }}
+}});
+EOF
+    chmod 644 /etc/polkit-1/rules.d/10-flarevpn-resolved.rules || true
+fi
+
+if [ -d "/etc/polkit-1/localauthority/50-local.d" ]; then
+    cat << 'EOF' > /etc/polkit-1/localauthority/50-local.d/10-flarevpn-resolved.pkla
+[FlareVPN resolved permissions]
+Identity=unix-user:*
+Action=org.freedesktop.resolve1.*
+ResultAny=yes
+ResultInactive=yes
+ResultActive=yes
+EOF
+fi
+"#,
+        path_str
+    );
+
+    if std::fs::write(&setup_script_path, script_content).is_ok() {
+        if Command::new("pkexec")
+            .args(["sh", setup_script_path.to_str().unwrap()])
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false) 
+        {
+            let _ = std::fs::write(&marker_path, "1");
+        }
+        let _ = std::fs::remove_file(setup_script_path);
+    }
 }
 
 #[tauri::command]

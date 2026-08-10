@@ -49,11 +49,11 @@ pub async fn parse_clipboard_data(text: &str, settings: &AppSettings) -> Result<
         let protocol = extract_protocol_from_json(&config_json);
         
         let profile = Profile {
-            id: None,
+            id: uuid::Uuid::new_v4().to_string(),
             name: name.clone(),
-            uri: "internal://json".to_string(),
-            config_json,
-            server_description: "JSON Profile".to_string(),
+            uri: Some("internal://json".to_string()),
+            config_json: Some(config_json),
+            server_description: Some("JSON Profile".to_string()),
             subscription_id: None,
             protocol,
         };
@@ -91,12 +91,31 @@ pub async fn parse_clipboard_data(text: &str, settings: &AppSettings) -> Result<
     
 
     let robust_decoded = decode_base64_robust(trimmed);
-    if robust_decoded != trimmed {
-        let lines: Vec<&str> = robust_decoded.lines().map(|l| l.trim()).filter(|l| !l.is_empty()).collect();
-        if lines.iter().all(|l| is_proxy_uri(l)) {
-            return parse_multiple_uris(&lines).map(|profiles| SubscriptionParseResult {
-                name: "Imported Profiles".to_string(),
-                profiles,
+    
+
+    if trimmed.starts_with("http://") || trimmed.starts_with("https://") {
+        return fetch_subscription(trimmed, settings).await;
+    }
+    
+
+    if !robust_decoded.is_empty() {
+        if robust_decoded.starts_with('{') && robust_decoded.ends_with('}') {
+            let is_doh_enabled = true;
+            let config_json = convert_if_needed(&robust_decoded, is_doh_enabled)?;
+            let name = extract_name_from_json(&robust_decoded);
+            let protocol = extract_protocol_from_json(&config_json);
+            let profile = Profile {
+                id: uuid::Uuid::new_v4().to_string(),
+                name: name.clone(),
+                uri: Some("internal://json".to_string()),
+                config_json: Some(config_json),
+                server_description: Some("JSON Profile".to_string()),
+                subscription_id: None,
+                protocol,
+            };
+            return Ok(SubscriptionParseResult {
+                name,
+                profiles: vec![profile],
                 upload: -1,
                 download: -1,
                 total: -1,
@@ -108,13 +127,8 @@ pub async fn parse_clipboard_data(text: &str, settings: &AppSettings) -> Result<
             });
         }
     }
-    
 
-    if trimmed.starts_with("http://") || trimmed.starts_with("https://") {
-        return fetch_subscription(trimmed, settings).await;
-    }
-    
-    Err("Invalid format".to_string())
+    Err("Invalid input: Not a valid URI, JSON, Base64 list, or Subscription URL".to_string())
 }
 
 fn is_proxy_uri(s: &str) -> bool {
@@ -182,11 +196,11 @@ fn build_profile_from_uri(uri: &str, subscription_id: Option<String>) -> Result<
         }
 
         return Ok(Profile {
-            id: None,
+            id: uuid::Uuid::new_v4().to_string(),
             name,
-            uri: "internal://json".to_string(),
-            config_json,
-            server_description,
+            uri: Some("internal://json".to_string()),
+            config_json: Some(config_json),
+            server_description: Some(server_description),
             subscription_id,
             protocol,
         });
@@ -210,11 +224,11 @@ fn build_profile_from_uri(uri: &str, subscription_id: Option<String>) -> Result<
     let protocol = extract_protocol_from_json(&config_json);
     
     Ok(Profile {
-        id: None,
+        id: uuid::Uuid::new_v4().to_string(),
         name,
-        uri: uri.to_string(),
-        config_json,
-        server_description: "URI Profile".to_string(),
+        uri: Some(uri.to_string()),
+        config_json: Some(config_json),
+        server_description: Some("URI Profile".to_string()),
         subscription_id,
         protocol,
     })

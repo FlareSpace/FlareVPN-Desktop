@@ -6,7 +6,7 @@ import i18n from '../i18n';
 import { patchConfigWithAdvancedSettings, getPrimaryProxyTag } from '../utils/configPatcher';
 
 export type VpnStatus = 'disconnected' | 'connecting' | 'connected' | 'disconnecting';
-export type NotificationType = 'success' | 'warning' | 'error';
+export type NotificationType = 'success' | 'warning' | 'error' | 'info';
 export type TabType = 'home' | 'ping' | 'subscriptions' | 'personalization' | 'language' | 'basic' | 'advanced';
 export type PingType = 'proxy' | 'tcp' | 'icmp';
 export type PingDisplayStyle = 'time' | 'icon' | 'both';
@@ -43,6 +43,8 @@ export interface AppNotification {
   type: NotificationType;
   message: string;
   duration: number;
+  count?: number;
+  createdAt?: number;
 }
 
 export interface AppSettings {
@@ -85,6 +87,37 @@ export interface AppSettings {
   network_stack: string;
   proxy_port: number;
 }
+
+const NOTIFY_SETTINGS_KEYS: (keyof AppSettings)[] = [
+  'split_tunneling_enabled',
+  'split_tunneling_mode',
+  'split_tunneling_apps_mode',
+  'split_tunneling_domains_mode',
+  'split_tunneling_apps',
+  'split_tunneling_domains',
+  'fragmentation_enabled',
+  'fragmentation_fallback',
+  'fragmentation_timeout',
+  'mux_enabled',
+  'mux_protocol',
+  'mux_concurrency',
+  'mux_padding',
+  'tls_spoof_enabled',
+  'tls_spoof_domain',
+  'tls_spoof_method',
+  'tls_fingerprint',
+  'remote_dns',
+  'custom_remote_dns',
+  'remote_dns_doh',
+  'remote_dns_strictly_tun',
+  'fake_ip_enabled',
+  'reset_chain_on_disconnect',
+  'mtu_auto',
+  'mtu_value',
+  'network_stack',
+];
+
+let settingsNotificationTimer: ReturnType<typeof setTimeout> | null = null;
 
 interface AppState {
   status: VpnStatus;
@@ -142,7 +175,18 @@ interface AppState {
   removeSubscription: (id: string) => Promise<void>;
   updateProfileConfigJson: (profileId: string, newConfigJson: string) => void;
   updateProfileDetails: (profileId: string, updatedFields: Partial<Profile>) => void;
+  loadSubscriptions: () => Promise<void>;
 }
+
+const syncSubscriptionToDb = async (sub: Subscription) => {
+  const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+  if (!isTauri) return;
+  try {
+    await invoke('save_subscription', { subscription: sub });
+  } catch (e) {
+    console.error("Failed to save subscription to SQLite DB:", e);
+  }
+};
 
 export const useAppStore = create<AppState>()(
   persist(
@@ -214,17 +258,24 @@ export const useAppStore = create<AppState>()(
       },
 
       setStatus: (status) => set({ status }),
-      addSubscription: (sub) => set((state) => ({ 
-        subscriptions: [...state.subscriptions, sub] 
-      })),
-      appendProfilesToSubscription: (id, profiles) => set((state) => ({
-        subscriptions: state.subscriptions.map(s => {
-          if (s.id === id) {
-            return { ...s, profiles: [...s.profiles, ...profiles] };
-          }
-          return s;
-        })
-      })),
+      addSubscription: (sub) => {
+        set((state) => ({ 
+          subscriptions: [...state.subscriptions, sub] 
+        }));
+        syncSubscriptionToDb(sub);
+      },
+      appendProfilesToSubscription: (id, profiles) => {
+        set((state) => ({
+          subscriptions: state.subscriptions.map(s => {
+            if (s.id === id) {
+              return { ...s, profiles: [...s.profiles, ...profiles] };
+            }
+            return s;
+          })
+        }));
+        const updatedSub = get().subscriptions.find(s => s.id === id);
+        if (updatedSub) syncSubscriptionToDb(updatedSub);
+      },
       updateProfileConfigJson: (profileId, newConfigJson) => {
         set((state) => ({
           subscriptions: state.subscriptions.map((sub) => ({
@@ -249,6 +300,9 @@ export const useAppStore = create<AppState>()(
           })),
         }));
 
+        const affectedSub = get().subscriptions.find(s => s.profiles.some(p => p.id === profileId));
+        if (affectedSub) syncSubscriptionToDb(affectedSub);
+
         const state = get();
         const isActiveProfile = state.selectedProfileId === profileId || state.chainProfileIds.includes(profileId);
         const isConnected = state.status === 'connected' || state.status === 'connecting';
@@ -268,6 +322,8 @@ export const useAppStore = create<AppState>()(
             }),
           })),
         }));
+        const affectedSub = get().subscriptions.find(s => s.profiles.some(p => p.id === profileId));
+        if (affectedSub) syncSubscriptionToDb(affectedSub);
       },
       setSelectedProfileId: (id) => {
         const state = get();
@@ -455,6 +511,7 @@ export const useAppStore = create<AppState>()(
             if (state.tunEnabled) {
               parsedConfig.route.auto_detect_interface = true;
               parsedConfig.route.default_domain_resolver = "dns-direct";
+              parsedConfig.route.find_process = true;
 
               systemServiceRules.push({
                 protocol: "dns",
@@ -536,10 +593,20 @@ export const useAppStore = create<AppState>()(
 
               if (hasProcessRules) {
                 const appOutbound = (appsMode === 'whitelist') ? primaryProxyTag : 'direct';
-                const appRule: any = { outbound: appOutbound };
-                if (processNames.size > 0) appRule.process_name = Array.from(processNames);
-                if (processPaths.size > 0) appRule.process_path = Array.from(processPaths);
-                splitRouteRules.push(appRule);
+                
+                if (processNames.size > 0) {
+                  splitRouteRules.push({
+                    outbound: appOutbound,
+                    process_name: Array.from(processNames)
+                  });
+                }
+                
+                if (processPaths.size > 0) {
+                  splitRouteRules.push({
+                    outbound: appOutbound,
+                    process_path: Array.from(processPaths)
+                  });
+                }
               }
 
               if (hasDomainRules) {
@@ -683,10 +750,37 @@ export const useAppStore = create<AppState>()(
         }
       },
       addNotification: (type, message, duration = 5) => {
-        const id = crypto.randomUUID();
-        set((state) => ({
-          notifications: [...state.notifications, { id, type, message, duration }].slice(-3)
-        }));
+        set((state) => {
+          const existingIndex = state.notifications.findIndex(
+            (n) => n.type === type && n.message === message
+          );
+
+          if (existingIndex !== -1) {
+            const updated = [...state.notifications];
+            const existing = updated[existingIndex];
+            const isSettingsWarning = message === i18n.t('notifications.settingsAppliedOnNextTunnel');
+            updated[existingIndex] = {
+              ...existing,
+              count: isSettingsWarning ? 1 : (existing.count || 1) + 1,
+              duration,
+              createdAt: Date.now(),
+            };
+            return { notifications: updated };
+          }
+
+          const id = crypto.randomUUID();
+          const newNotif: AppNotification = {
+            id,
+            type,
+            message,
+            duration,
+            count: 1,
+            createdAt: Date.now(),
+          };
+          return {
+            notifications: [...state.notifications, newNotif].slice(-5)
+          };
+        });
       },
       removeNotification: (id) => {
         set((state) => ({
@@ -732,8 +826,44 @@ export const useAppStore = create<AppState>()(
         }
       },
       setLanguage: (lang) => set({ language: lang }),
+      loadSubscriptions: async () => {
+        const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+        if (!isTauri) return;
+        try {
+          const dbSubs: Subscription[] = await invoke('get_subscriptions');
+          
+          const legacyStorageRaw = localStorage.getItem('flarevpn-storage');
+          if (legacyStorageRaw) {
+            try {
+              const parsed = JSON.parse(legacyStorageRaw);
+              const legacySubs = parsed?.state?.subscriptions;
+              if (Array.isArray(legacySubs) && legacySubs.length > 0) {
+                if (!dbSubs || dbSubs.length === 0) {
+                  await invoke('save_all_subscriptions', { subscriptions: legacySubs });
+                  set({ subscriptions: legacySubs });
+                  delete parsed.state.subscriptions;
+                  localStorage.setItem('flarevpn-storage', JSON.stringify(parsed));
+                  return;
+                } else {
+                  delete parsed.state.subscriptions;
+                  localStorage.setItem('flarevpn-storage', JSON.stringify(parsed));
+                }
+              }
+            } catch (err) {
+              console.warn("Failed to parse legacy localStorage:", err);
+            }
+          }
+
+          if (dbSubs) {
+            set({ subscriptions: dbSubs });
+          }
+        } catch (e) {
+          console.error("Failed to load subscriptions from SQLite DB:", e);
+        }
+      },
       loadSettings: async () => {
         try {
+          await get().loadSubscriptions();
           const settings: AppSettings = await invoke('get_app_settings');
           set({ settings });
           if (settings.selected_profile_id) {
@@ -749,14 +879,29 @@ export const useAppStore = create<AppState>()(
         }
       },
       updateSetting: async (key, value) => {
-
-
+        let changed = false;
         let newSettings!: AppSettings;
         set((state) => {
+          const oldVal = state.settings[key];
+          if (Array.isArray(oldVal) || Array.isArray(value)) {
+            changed = JSON.stringify(oldVal) !== JSON.stringify(value);
+          } else {
+            changed = oldVal !== value;
+          }
           newSettings = { ...state.settings, [key]: value };
           return { settings: newSettings };
         });
-        
+
+        if (changed && NOTIFY_SETTINGS_KEYS.includes(key)) {
+          if (settingsNotificationTimer) {
+            clearTimeout(settingsNotificationTimer);
+          }
+          settingsNotificationTimer = setTimeout(() => {
+            get().addNotification('warning', i18n.t('notifications.settingsAppliedOnNextTunnel'), 3);
+            settingsNotificationTimer = null;
+          }, 100);
+        }
+
         try {
           await invoke('update_app_settings', { settings: newSettings });
         } catch (e) {
@@ -823,6 +968,11 @@ export const useAppStore = create<AppState>()(
               return existing;
             })
           }));
+
+          const updatedSub = get().subscriptions.find(s => s.id === id);
+          if (updatedSub) {
+            await syncSubscriptionToDb(updatedSub);
+          }
         } catch (error) {
           throw error;
         }
@@ -853,6 +1003,11 @@ export const useAppStore = create<AppState>()(
           })
         }));
 
+        const updatedSub = get().subscriptions.find(s => s.id === id);
+        if (updatedSub) {
+          await syncSubscriptionToDb(updatedSub);
+        }
+
         if (urlChanged && trimmedUrl.startsWith('http')) {
           try {
             await get().updateSubscription(id);
@@ -862,15 +1017,17 @@ export const useAppStore = create<AppState>()(
         }
       },
       removeSubscription: async (id: string) => {
-        try {
-          await invoke('delete_subscription_profiles', { subscriptionId: id });
-          set((state) => ({
-            subscriptions: state.subscriptions.filter(s => s.id !== id)
-          }));
-        } catch (e) {
-          console.error("Failed to remove subscription:", e);
-          throw e;
+        const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+        if (isTauri) {
+          try {
+            await invoke('delete_subscription', { subscriptionId: id });
+          } catch (e) {
+            console.error("Failed to delete subscription from SQLite DB:", e);
+          }
         }
+        set((state) => ({
+          subscriptions: state.subscriptions.filter(s => s.id !== id)
+        }));
       },
       startPing: async (profileIds) => {
         const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
@@ -1033,7 +1190,6 @@ export const useAppStore = create<AppState>()(
     {
       name: 'flarevpn-storage',
       partialize: (state) => ({
-        subscriptions: state.subscriptions,
         selectedProfileId: state.selectedProfileId,
         chainProfileIds: state.chainProfileIds,
         pingType: state.pingType,

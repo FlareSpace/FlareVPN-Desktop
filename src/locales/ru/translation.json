@@ -144,7 +144,8 @@
     "selectModeFirst": "Выберите хотя бы один режим подключения",
     "connectionTimeout": "Время подключения истекло",
     "clickToExpand": "Нажмите, чтобы развернуть",
-    "clickToCollapse": "Нажмите, чтобы свернуть"
+    "clickToCollapse": "Нажмите, чтобы свернуть",
+    "settingsAppliedOnNextTunnel": "Настройки будут применены при следующем создании туннеля."
   },
   "mode": {
     "label": "Режим",

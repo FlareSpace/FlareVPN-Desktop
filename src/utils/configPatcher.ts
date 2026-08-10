@@ -158,9 +158,6 @@ export function patchConfigWithAdvancedSettings(rawConfig: any, settings: AppSet
   }
 
 
-  if (!config.route) config.route = {};
-  config.route.final = getPrimaryProxyTag(config);
-
   return config;
 }
 

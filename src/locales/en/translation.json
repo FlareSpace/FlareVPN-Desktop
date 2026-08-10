@@ -144,7 +144,8 @@
     "selectModeFirst": "Please select at least one connection mode",
     "connectionTimeout": "Connection timed out",
     "clickToExpand": "Click to expand",
-    "clickToCollapse": "Click to collapse"
+    "clickToCollapse": "Click to collapse",
+    "settingsAppliedOnNextTunnel": "Settings will be applied on the next tunnel creation."
   },
   "mode": {
     "label": "Mode",

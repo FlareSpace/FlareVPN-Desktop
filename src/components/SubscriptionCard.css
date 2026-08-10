@@ -1,16 +1,22 @@
 .sub-card-container {
   display: flex;
   flex-direction: column;
-  margin: 0 12px 8px 12px;
+  margin: 0 8px 6px 8px;
   border-radius: var(--border-radius-md);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   transform: translateZ(0);
+  position: relative;
+  z-index: 1;
+}
+
+.sub-card-container.menu-open {
+  z-index: 100;
 }
 
 .sub-card-main {
   background-color: var(--bg-card);
   border-radius: var(--border-radius-md);
-  padding: 10px 12px;
+  padding: 7px 10px;
   display: flex;
   flex-direction: column;
   box-shadow: none;
@@ -38,7 +44,7 @@
 .sub-card-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   flex: 1;
   overflow: hidden;
 }
@@ -46,7 +52,7 @@
 .expand-arrow {
   color: var(--text-secondary);
   transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
-  padding: 4px;
+  padding: 2px;
 }
 
 .expand-arrow:hover {
@@ -62,12 +68,12 @@
   flex-direction: column;
   flex: 1;
   overflow: hidden;
-  gap: 4px;
+  gap: 2px;
 }
 
 .sub-name {
   font-weight: 500;
-  font-size: 14px;
+  font-size: 13px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -76,15 +82,15 @@
 .progress-container {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 2px;
+  gap: 6px;
+  margin-top: 1px;
 }
 
 .progress-bar-bg {
-  width: 120px;
-  height: 14px;
+  width: 105px;
+  height: 12px;
   background-color: var(--border-color);
-  border-radius: 8px;
+  border-radius: 6px;
   overflow: hidden;
   position: relative;
 }
@@ -92,7 +98,7 @@
 .progress-bar-fill {
   height: 100%;
   background-color: var(--accent-color, #007bff);
-  border-radius: 8px;
+  border-radius: 6px;
   transition: width 0.3s ease;
 }
 
@@ -101,7 +107,7 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 500;
   white-space: nowrap;
   pointer-events: none;
@@ -122,11 +128,11 @@
 .sub-meta-col {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 }
 
 .meta-text {
-  font-size: 10px;
+  font-size: 9px;
   color: var(--text-secondary);
   opacity: 0.8;
 }
@@ -137,13 +143,13 @@
   gap: 2px;
   background-color: rgba(128, 128, 128, 0.1);
   border: 1px solid rgba(128, 128, 128, 0.15);
-  border-radius: 24px;
-  padding: 3px 6px;
+  border-radius: 20px;
+  padding: 2px 4px;
 }
 
 .action-btn {
   color: var(--text-secondary);
-  padding: 5px;
+  padding: 3px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -209,7 +215,7 @@
 }
 
 .profile-item {
-  padding: 8px 14px;
+  padding: 10px 14px;
   border-top: 1px solid var(--border-color);
   transition: background-color var(--transition-fast);
   cursor: pointer;
@@ -270,13 +276,13 @@
 .profile-ping-result {
   display: flex;
   align-items: center;
-  margin-left: 10px;
+  margin-left: 8px;
 }
 
 .ping-skeleton {
-  width: 38px;
-  height: 15px;
-  border-radius: 6px;
+  width: 34px;
+  height: 13px;
+  border-radius: 5px;
   background: rgba(255, 255, 255, 0.12);
   will-change: opacity;
   animation: skeleton-pulse 1.2s ease-in-out infinite;
@@ -295,7 +301,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
 }
 
@@ -315,8 +321,8 @@
 }
 
 .ping-dot {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background-color: currentColor;
   display: inline-block;
@@ -325,12 +331,12 @@
 
 
 .sub-card-description {
-  margin-top: 8px;
-  padding-top: 8px;
+  margin-top: 6px;
+  padding-top: 6px;
   border-top: 1px solid var(--border-color);
-  font-size: 11px;
+  font-size: 10.5px;
   color: var(--text-secondary);
-  line-height: 1.4;
+  line-height: 1.35;
   white-space: pre-wrap;
   word-break: break-word;
   opacity: 0.85;
@@ -507,17 +513,17 @@
 
 
 .profile-chain-badge {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   background: var(--accent-color, #007bff);
   color: #ffffff;
-  font-size: 10.5px;
+  font-size: 9.5px;
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: 9px;
+  margin-right: 6px;
   flex-shrink: 0;
   box-shadow: 0 2px 6px rgba(0, 123, 255, 0.4);
   animation: pop-in 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -598,11 +604,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 4px;
+  padding: 2px;
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s ease;
-  margin-left: 6px;
+  margin-left: 4px;
   flex-shrink: 0;
 }
 

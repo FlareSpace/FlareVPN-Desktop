@@ -159,7 +159,7 @@ const ProfileItem = React.memo(({ profile }: { profile: Profile }) => {
             }
           }}
         >
-          <ChevronRight size={16} />
+          <ChevronRight size={14} />
         </button>
       </div>
 
@@ -228,7 +228,7 @@ const ProfileItem = React.memo(({ profile }: { profile: Profile }) => {
             }}
           >
             <div className="context-menu-item-content">
-              <Gauge size={16} />
+              <Gauge size={14} />
               <span>{t('subscriptionCard.test')}</span>
             </div>
           </div>
@@ -241,10 +241,10 @@ const ProfileItem = React.memo(({ profile }: { profile: Profile }) => {
             }}
           >
             <div className="context-menu-item-content">
-              <Link size={16} />
+              <Link size={14} />
               <span>{t('subscriptionCard.chain')}</span>
             </div>
-            {inChain && <Check size={16} />}
+            {inChain && <Check size={14} />}
           </div>
         </div>,
         document.body
@@ -355,13 +355,13 @@ export default function SubscriptionCard({ subscription, isExpanded, onToggle }:
   };
 
   return (
-    <div className="sub-card-container">
+    <div className={`sub-card-container ${menuOpen ? 'menu-open' : ''}`}>
       <div className={`sub-card-main ${isExpanded ? 'expanded' : ''}`} onClick={onToggle}>
         <div className="sub-card-main-content">
           <div className="sub-card-left">
             <ChevronRight 
               className={`expand-arrow ${isExpanded ? 'expanded' : ''}`} 
-              size={18} 
+              size={16} 
             />
             <div className="sub-info-col">
               <span className="sub-name">{subscription.name}</span>
@@ -392,14 +392,14 @@ export default function SubscriptionCard({ subscription, isExpanded, onToggle }:
           
           <div className="sub-card-right" onClick={e => e.stopPropagation()}>
             <button className="action-btn" title="Refresh" onClick={handleUpdate} disabled={isUpdating}>
-              <RefreshCw size={14} className={isUpdating ? 'spin' : ''} />
+              <RefreshCw size={13} className={isUpdating ? 'spin' : ''} />
             </button>
             <button className="action-btn" title="Speed Test" onClick={handleSpeedTest}>
-              <Gauge size={14} />
+              <Gauge size={13} />
             </button>
             <div className="more-menu-container" ref={menuRef}>
               <button className="action-btn" title="More" onClick={() => setMenuOpen(!menuOpen)}>
-                <MoreVertical size={14} />
+                <MoreVertical size={13} />
               </button>
               {menuOpen && (
                 <div className="sub-context-menu">

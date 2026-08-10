@@ -375,10 +375,6 @@ pub fn convert_v2ray_to_singbox(xray: &mut Value, is_doh_enabled: bool) -> Resul
     sb_dns_servers.push(migrate_dns_server_object(&mut ddns));
     
     let mut sb_dns_rules = Vec::new();
-    sb_dns_rules.push(json!({
-        "outbound": ["direct"],
-        "server": "dns-direct"
-    }));
     
     if let Some(servers) = xray_dns.and_then(|d| d.get("servers")).and_then(|s| s.as_array()) {
         for (i, s) in servers.iter().enumerate() {

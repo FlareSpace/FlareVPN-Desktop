@@ -67,45 +67,19 @@
   position: relative;
 }
 
-.subscriptions-section-header {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 12px;
-  padding: 16px 24px 4px 24px;
-  flex-shrink: 0;
-  z-index: 10;
-  animation: headerFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes headerFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 .subscriptions-panel {
   flex: 1;
   display: flex;
   flex-direction: column;
   padding: 24px;
   margin-bottom: 80px; 
-  gap: 12px;
+  gap: 8px;
   overflow-y: auto;
-  transition: margin-bottom 0.22s cubic-bezier(0.16, 1, 0.3, 1), padding 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.subscriptions-panel.has-header {
-  padding-top: 8px;
+  transition: margin-bottom 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .subscriptions-panel.expanded-mode {
-  margin-bottom: 0; 
+  margin-bottom: 0;
 }
 
 .empty-subscriptions {
@@ -128,13 +102,15 @@
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   padding: 6px 12px;
   border-radius: var(--border-radius-lg);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
   transition: all var(--transition-fast);
+  white-space: nowrap;
+  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .collapse-all-btn:hover {
@@ -156,5 +132,8 @@
   top: 16px;
   right: 24px;
   z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 

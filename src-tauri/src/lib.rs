@@ -105,7 +105,7 @@ async fn parse_clipboard(text: String, db_state: State<'_, DbState>) -> Result<S
 }
 
 #[tauri::command]
-async fn add_profile(profile: Profile, db_state: State<'_, DbState>) -> Result<i64, String> {
+async fn add_profile(profile: Profile, db_state: State<'_, DbState>) -> Result<(), String> {
     let db = db_state.inner().clone();
     tokio::task::spawn_blocking(move || db.insert_profile(&profile))
         .await
@@ -117,6 +117,42 @@ async fn add_profile(profile: Profile, db_state: State<'_, DbState>) -> Result<i
 async fn get_profiles(db_state: State<'_, DbState>) -> Result<Vec<Profile>, String> {
     let db = db_state.inner().clone();
     tokio::task::spawn_blocking(move || db.get_profiles())
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn get_subscriptions(db_state: State<'_, DbState>) -> Result<Vec<db::Subscription>, String> {
+    let db = db_state.inner().clone();
+    tokio::task::spawn_blocking(move || db.get_subscriptions())
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn save_subscription(subscription: db::Subscription, db_state: State<'_, DbState>) -> Result<(), String> {
+    let db = db_state.inner().clone();
+    tokio::task::spawn_blocking(move || db.save_subscription(&subscription))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn save_all_subscriptions(subscriptions: Vec<db::Subscription>, db_state: State<'_, DbState>) -> Result<(), String> {
+    let db = db_state.inner().clone();
+    tokio::task::spawn_blocking(move || db.save_all_subscriptions(&subscriptions))
+        .await
+        .map_err(|e| e.to_string())?
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn delete_subscription(subscription_id: String, db_state: State<'_, DbState>) -> Result<(), String> {
+    let db = db_state.inner().clone();
+    tokio::task::spawn_blocking(move || db.delete_subscription(&subscription_id))
         .await
         .map_err(|e| e.to_string())?
         .map_err(|e| e.to_string())
@@ -358,6 +394,10 @@ pub fn run() {
             parse_clipboard, 
             add_profile, 
             get_profiles,
+            get_subscriptions,
+            save_subscription,
+            save_all_subscriptions,
+            delete_subscription,
             delete_subscription_profiles,
             ping_profiles_proxy,
             ping_profile_direct,

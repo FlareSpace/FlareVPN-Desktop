@@ -4,14 +4,37 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Profile {
-    pub id: Option<i64>,
+pub struct ProfileItem {
+    pub id: String,
     pub name: String,
-    pub uri: String,
-    pub config_json: String,
-    pub server_description: String,
-    pub subscription_id: Option<String>,
+    pub uri: Option<String>,
     pub protocol: Option<String>,
+    #[serde(rename = "serverDescription")]
+    pub server_description: Option<String>,
+    pub config_json: Option<String>,
+    pub subscription_id: Option<String>,
+}
+
+pub type Profile = ProfileItem;
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Subscription {
+    pub id: String,
+    #[serde(rename = "urlOrBase64")]
+    pub url_or_base64: String,
+    pub name: String,
+    pub profiles: Vec<ProfileItem>,
+    pub upload: Option<i64>,
+    pub download: Option<i64>,
+    pub total: Option<i64>,
+    pub expire: Option<i64>,
+    #[serde(rename = "updateInterval")]
+    pub update_interval: Option<i64>,
+    pub description: Option<String>,
+    #[serde(rename = "supportUrl")]
+    pub support_url: Option<String>,
+    #[serde(rename = "webPageUrl")]
+    pub web_page_url: Option<String>,
 }
 
 use std::sync::Arc;
@@ -108,11 +131,6 @@ impl Default for AppSettings {
     }
 }
 
-
-
-
-
-
 #[cfg(target_os = "windows")]
 fn get_real_hwid_or_generate() -> String {
     use std::process::Command;
@@ -138,7 +156,6 @@ fn get_real_hwid_or_generate() -> String {
 
 #[cfg(target_os = "linux")]
 fn get_real_hwid_or_generate() -> String {
-
     if let Ok(id) = std::fs::read_to_string("/etc/machine-id") {
         let trimmed = id.trim().to_string();
         if !trimmed.is_empty() {
@@ -157,7 +174,7 @@ fn get_real_hwid_or_generate() -> String {
 
 #[cfg(target_os = "macos")]
 fn get_real_hwid_or_generate() -> String {
-
+    use std::process::Command;
     if let Ok(output) = Command::new("ioreg")
         .args(["-rd1", "-c", "IOPlatformExpertDevice"])
         .output()
@@ -165,7 +182,6 @@ fn get_real_hwid_or_generate() -> String {
         let stdout = String::from_utf8_lossy(&output.stdout);
         for line in stdout.lines() {
             if line.contains("IOPlatformSerialNumber") {
-
                 if let Some(start) = line.rfind('"') {
                     let after = &line[..start];
                     if let Some(end) = after.rfind('"') {
@@ -189,20 +205,56 @@ fn get_real_hwid_or_generate() -> String {
 impl DbState {
     pub fn new(path: &str) -> Result<Self> {
         let conn = Connection::open(path)?;
-        
+
+        let is_old_profiles_schema = conn
+            .prepare("PRAGMA table_info(profiles)")
+            .and_then(|mut stmt| {
+                let mut rows = stmt.query([])?;
+                while let Some(row) = rows.next()? {
+                    let name: String = row.get(1)?;
+                    let ty: String = row.get(2)?;
+                    if name == "id" && ty.to_uppercase() == "INTEGER" {
+                        return Ok(true);
+                    }
+                }
+                Ok(false)
+            })
+            .unwrap_or(false);
+
+        if is_old_profiles_schema {
+            let _ = conn.execute("DROP TABLE profiles", []);
+        }
+
         conn.execute(
-            "CREATE TABLE IF NOT EXISTS profiles (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
+            "CREATE TABLE IF NOT EXISTS subscriptions (
+                id TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
-                uri TEXT NOT NULL,
-                config_json TEXT NOT NULL,
-                server_description TEXT NOT NULL,
-                subscription_id TEXT,
-                protocol TEXT
+                url_or_base64 TEXT NOT NULL,
+                upload INTEGER,
+                download INTEGER,
+                total INTEGER,
+                expire INTEGER,
+                update_interval INTEGER,
+                description TEXT,
+                support_url TEXT,
+                web_page_url TEXT
             )",
             [],
         )?;
-        
+
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS profiles (
+                id TEXT PRIMARY KEY,
+                subscription_id TEXT,
+                name TEXT NOT NULL,
+                uri TEXT,
+                protocol TEXT,
+                server_description TEXT,
+                config_json TEXT
+            )",
+            [],
+        )?;
+
         conn.execute(
             "CREATE TABLE IF NOT EXISTS settings (
                 key TEXT PRIMARY KEY,
@@ -210,12 +262,171 @@ impl DbState {
             )",
             [],
         )?;
-        
+
         Ok(Self {
             conn: Arc::new(Mutex::new(conn)),
         })
     }
-    
+
+    pub fn get_subscriptions(&self) -> Result<Vec<Subscription>> {
+        let conn = self.conn.lock().unwrap();
+        let mut sub_stmt = conn.prepare(
+            "SELECT id, name, url_or_base64, upload, download, total, expire, update_interval, description, support_url, web_page_url FROM subscriptions"
+        )?;
+
+        let mut prof_stmt = conn.prepare(
+            "SELECT id, name, uri, protocol, server_description, config_json, subscription_id FROM profiles WHERE subscription_id = ?1"
+        )?;
+
+        let sub_rows = sub_stmt.query_map([], |row| {
+            let sub_id: String = row.get(0)?;
+            Ok((
+                sub_id.clone(),
+                Subscription {
+                    id: sub_id,
+                    name: row.get(1)?,
+                    url_or_base64: row.get(2)?,
+                    upload: row.get(3)?,
+                    download: row.get(4)?,
+                    total: row.get(5)?,
+                    expire: row.get(6)?,
+                    update_interval: row.get(7)?,
+                    description: row.get(8)?,
+                    support_url: row.get(9)?,
+                    web_page_url: row.get(10)?,
+                    profiles: Vec::new(),
+                },
+            ))
+        })?;
+
+        let mut subscriptions = Vec::new();
+        for sub_res in sub_rows {
+            let (sub_id, mut sub) = sub_res?;
+            let prof_rows = prof_stmt.query_map(params![sub_id], |row| {
+                Ok(ProfileItem {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    uri: row.get(2)?,
+                    protocol: row.get(3)?,
+                    server_description: row.get(4)?,
+                    config_json: row.get(5)?,
+                    subscription_id: row.get(6)?,
+                })
+            })?;
+
+            for prof in prof_rows {
+                sub.profiles.push(prof?);
+            }
+            subscriptions.push(sub);
+        }
+
+        Ok(subscriptions)
+    }
+
+    pub fn save_subscription(&self, sub: &Subscription) -> Result<()> {
+        let mut conn = self.conn.lock().unwrap();
+        let tx = conn.transaction()?;
+
+        tx.execute(
+            "INSERT OR REPLACE INTO subscriptions (
+                id, name, url_or_base64, upload, download, total, expire, update_interval, description, support_url, web_page_url
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+            params![
+                sub.id,
+                sub.name,
+                sub.url_or_base64,
+                sub.upload,
+                sub.download,
+                sub.total,
+                sub.expire,
+                sub.update_interval,
+                sub.description,
+                sub.support_url,
+                sub.web_page_url,
+            ],
+        )?;
+
+        tx.execute("DELETE FROM profiles WHERE subscription_id = ?1", params![sub.id])?;
+
+        for p in &sub.profiles {
+            tx.execute(
+                "INSERT INTO profiles (id, subscription_id, name, uri, protocol, server_description, config_json)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+                params![
+                    p.id,
+                    sub.id,
+                    p.name,
+                    p.uri,
+                    p.protocol,
+                    p.server_description,
+                    p.config_json,
+                ],
+            )?;
+        }
+
+        tx.commit()?;
+        Ok(())
+    }
+
+    pub fn save_all_subscriptions(&self, subs: &[Subscription]) -> Result<()> {
+        let mut conn = self.conn.lock().unwrap();
+        let tx = conn.transaction()?;
+
+        tx.execute("DELETE FROM profiles", [])?;
+        tx.execute("DELETE FROM subscriptions", [])?;
+
+        for sub in subs {
+            tx.execute(
+                "INSERT INTO subscriptions (
+                    id, name, url_or_base64, upload, download, total, expire, update_interval, description, support_url, web_page_url
+                ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+                params![
+                    sub.id,
+                    sub.name,
+                    sub.url_or_base64,
+                    sub.upload,
+                    sub.download,
+                    sub.total,
+                    sub.expire,
+                    sub.update_interval,
+                    sub.description,
+                    sub.support_url,
+                    sub.web_page_url,
+                ],
+            )?;
+
+            for p in &sub.profiles {
+                tx.execute(
+                    "INSERT INTO profiles (id, subscription_id, name, uri, protocol, server_description, config_json)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+                    params![
+                        p.id,
+                        sub.id,
+                        p.name,
+                        p.uri,
+                        p.protocol,
+                        p.server_description,
+                        p.config_json,
+                    ],
+                )?;
+            }
+        }
+
+        tx.commit()?;
+        Ok(())
+    }
+
+    pub fn delete_subscription(&self, subscription_id: &str) -> Result<()> {
+        let mut conn = self.conn.lock().unwrap();
+        let tx = conn.transaction()?;
+
+        tx.execute("DELETE FROM profiles WHERE subscription_id = ?1", params![subscription_id])?;
+        tx.execute("DELETE FROM subscriptions WHERE id = ?1", params![subscription_id])?;
+
+        tx.commit()?;
+        Ok(())
+    }
+
     pub fn get_settings(&self) -> Result<AppSettings> {
         let (settings, has_any) = {
             let conn = self.conn.lock().unwrap();
@@ -345,35 +556,36 @@ impl DbState {
         Ok(())
     }
     
-    pub fn insert_profile(&self, profile: &Profile) -> Result<i64> {
+    pub fn insert_profile(&self, profile: &ProfileItem) -> Result<()> {
         let conn = self.conn.lock().unwrap();
         conn.execute(
-            "INSERT INTO profiles (name, uri, config_json, server_description, subscription_id, protocol)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            "INSERT OR REPLACE INTO profiles (id, subscription_id, name, uri, protocol, server_description, config_json)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![
+                profile.id,
+                profile.subscription_id,
                 profile.name,
                 profile.uri,
-                profile.config_json,
-                profile.server_description,
-                profile.subscription_id,
                 profile.protocol,
+                profile.server_description,
+                profile.config_json,
             ],
         )?;
-        Ok(conn.last_insert_rowid())
+        Ok(())
     }
     
-    pub fn get_profiles(&self) -> Result<Vec<Profile>> {
+    pub fn get_profiles(&self) -> Result<Vec<ProfileItem>> {
         let conn = self.conn.lock().unwrap();
-        let mut stmt = conn.prepare("SELECT id, name, uri, config_json, server_description, subscription_id, protocol FROM profiles")?;
+        let mut stmt = conn.prepare("SELECT id, name, uri, protocol, server_description, config_json, subscription_id FROM profiles")?;
         let profile_iter = stmt.query_map([], |row| {
-            Ok(Profile {
+            Ok(ProfileItem {
                 id: row.get(0)?,
                 name: row.get(1)?,
                 uri: row.get(2)?,
-                config_json: row.get(3)?,
+                protocol: row.get(3)?,
                 server_description: row.get(4)?,
-                subscription_id: row.get(5)?,
-                protocol: row.get(6)?,
+                config_json: row.get(5)?,
+                subscription_id: row.get(6)?,
             })
         })?;
         
@@ -393,3 +605,4 @@ impl DbState {
         Ok(())
     }
 }
+

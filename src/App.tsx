@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronsUp } from 'lucide-react';
 import TitleBar from './components/TitleBar';
 import ResizeBorders from './components/ResizeBorders';
 import Sidebar from './components/Sidebar';
@@ -188,18 +188,7 @@ function App() {
         <div className="main-view">
           <div className={`tab-container ${getTabClass('home')}`}>
             <div className="subscriptions-section">
-              {expandedIds.length > 0 && (
-                <div className="subscriptions-section-header">
-                  <button 
-                    className="collapse-all-btn"
-                    onClick={() => setExpandedIds([])}
-                  >
-                    <span>{t('home.collapseAll')}</span>
-                    <ChevronDown size={14} />
-                  </button>
-                </div>
-              )}
-              <div className={`subscriptions-panel ${expandedIds.length > 0 ? 'expanded-mode has-header' : ''}`}>
+              <div className={`subscriptions-panel ${expandedIds.length > 0 ? 'expanded-mode' : ''}`}>
                 {subscriptions.length === 0 ? (
                   <div className="empty-subscriptions">
                     <span>{t('home.noProfiles')}</span>
@@ -224,6 +213,16 @@ function App() {
             </div>
             <div className="connection-panel">
               <div className="connection-panel-top">
+                {expandedIds.length > 0 && (
+                  <button 
+                    className="collapse-all-btn top-menu"
+                    onClick={() => setExpandedIds([])}
+                    title={t('home.collapseAll')}
+                  >
+                    <ChevronsUp size={14} />
+                    <span>{t('home.collapseAll')}</span>
+                  </button>
+                )}
                 <TopModeMenu />
               </div>
               <MainToggle />
