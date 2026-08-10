@@ -86,6 +86,8 @@ export default function BasicSettingsTab() {
   const { t } = useTranslation();
   const settings = useAppStore(state => state.settings);
   const updateSetting = useAppStore(state => state.updateSetting);
+  const tunEnabled = useAppStore(state => state.tunEnabled);
+  const isProxyMode = !tunEnabled;
 
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -144,7 +146,14 @@ export default function BasicSettingsTab() {
     return () => document.body.classList.remove('modal-open');
   }, [isModalOpen]);
 
+  useEffect(() => {
+    if (isProxyMode && isModalOpen) {
+      setIsModalOpen(false);
+    }
+  }, [isProxyMode, isModalOpen]);
+
   const handleOpenModal = () => {
+    if (isProxyMode) return;
     const apps = settings.split_tunneling_apps || [];
     setLocalApps(apps);
     setLocalDomains(settings.split_tunneling_domains || []);
@@ -237,6 +246,7 @@ export default function BasicSettingsTab() {
                   type="checkbox"
                   checked={settings.split_tunneling_enabled || false}
                   onChange={(e) => updateSetting('split_tunneling_enabled', e.target.checked)}
+                  disabled={isProxyMode}
                 />
                 <span className="slider round"></span>
               </label>
@@ -248,7 +258,11 @@ export default function BasicSettingsTab() {
                   <p className="split-tunneling-desc">
                     {t('basicTab.splitTunnelingDesc')}
                   </p>
-                  <button className="change-btn" onClick={handleOpenModal}>
+                  <button
+                    className={`change-btn ${isProxyMode ? 'disabled' : ''}`}
+                    onClick={isProxyMode ? undefined : handleOpenModal}
+                    disabled={isProxyMode}
+                  >
                     {t('basicTab.change')}
                   </button>
                 </div>

@@ -480,9 +480,16 @@ export const useAppStore = create<AppState>()(
             const splitDnsRules: any[] = [];
             let isWhitelistActive = false;
 
-            if (state.settings.split_tunneling_enabled) {
+            if (state.settings.split_tunneling_enabled && state.tunEnabled) {
               const apps = state.settings.split_tunneling_apps || [];
               const rawDomains = state.settings.split_tunneling_domains || [];
+
+              const appsMode = state.settings.split_tunneling_apps_mode || state.settings.split_tunneling_mode || 'whitelist';
+              const domainsMode = state.settings.split_tunneling_domains_mode || state.settings.split_tunneling_mode || 'whitelist';
+
+              if (appsMode === 'whitelist' || domainsMode === 'whitelist') {
+                isWhitelistActive = true;
+              }
 
               const processNames = new Set<string>();
               const processPaths = new Set<string>();
@@ -497,6 +504,8 @@ export const useAppStore = create<AppState>()(
                   const baseName = trimmed.replace(/\.exe$/i, '');
                   processNames.add(baseName);
                   processNames.add(`${baseName}.exe`);
+                  processNames.add(baseName.toLowerCase());
+                  processNames.add(`${baseName.toLowerCase()}.exe`);
                 }
               }
 
@@ -525,58 +534,48 @@ export const useAppStore = create<AppState>()(
               const hasDomainRules = domainSuffixes.length > 0;
               const hasIpRules = ipCidrs.length > 0;
 
-              if (hasProcessRules || hasDomainRules || hasIpRules) {
-                const appsMode = state.settings.split_tunneling_apps_mode || state.settings.split_tunneling_mode || 'whitelist';
-                const domainsMode = state.settings.split_tunneling_domains_mode || state.settings.split_tunneling_mode || 'whitelist';
+              if (hasProcessRules) {
+                const appOutbound = (appsMode === 'whitelist') ? primaryProxyTag : 'direct';
+                const appRule: any = { outbound: appOutbound };
+                if (processNames.size > 0) appRule.process_name = Array.from(processNames);
+                if (processPaths.size > 0) appRule.process_path = Array.from(processPaths);
+                splitRouteRules.push(appRule);
+              }
 
-                if (hasProcessRules) {
-                  const appOutbound = (appsMode === 'whitelist') ? primaryProxyTag : 'direct';
-                  const appRule: any = { outbound: appOutbound };
-                  if (processNames.size > 0) appRule.process_name = Array.from(processNames);
-                  if (processPaths.size > 0) appRule.process_path = Array.from(processPaths);
-                  splitRouteRules.push(appRule);
+              if (hasDomainRules) {
+                const domainOutbound = (domainsMode === 'whitelist') ? primaryProxyTag : 'direct';
+                splitRouteRules.push({
+                  domain_suffix: domainSuffixes,
+                  outbound: domainOutbound
+                });
 
-                  if (appsMode === 'whitelist') isWhitelistActive = true;
-                }
-
-                if (hasDomainRules) {
-                  const domainOutbound = (domainsMode === 'whitelist') ? primaryProxyTag : 'direct';
-                  splitRouteRules.push({
+                if (domainsMode === 'whitelist') {
+                  splitDnsRules.push({
                     domain_suffix: domainSuffixes,
-                    outbound: domainOutbound
+                    server: 'dns-remote'
                   });
-
-                  if (domainsMode === 'whitelist') {
-                    splitDnsRules.push({
-                      domain_suffix: domainSuffixes,
-                      server: 'dns-remote'
-                    });
-                    isWhitelistActive = true;
-                  } else {
-                    splitDnsRules.push({
-                      domain_suffix: domainSuffixes,
-                      server: 'dns-direct'
-                    });
-                  }
-                }
-
-                if (hasIpRules) {
-                  const ipOutbound = (domainsMode === 'whitelist') ? primaryProxyTag : 'direct';
-                  splitRouteRules.push({
-                    ip_cidr: ipCidrs,
-                    outbound: ipOutbound
+                } else {
+                  splitDnsRules.push({
+                    domain_suffix: domainSuffixes,
+                    server: 'dns-direct'
                   });
-
-                  if (domainsMode === 'whitelist') isWhitelistActive = true;
                 }
+              }
+
+              if (hasIpRules) {
+                const ipOutbound = (domainsMode === 'whitelist') ? primaryProxyTag : 'direct';
+                splitRouteRules.push({
+                  ip_cidr: ipCidrs,
+                  outbound: ipOutbound
+                });
               }
             }
 
-            parsedConfig.route.rules = [...systemServiceRules, ...splitRouteRules, ...initialProfileRules];
-
             if (isWhitelistActive) {
+              parsedConfig.route.rules = [...systemServiceRules, ...splitRouteRules];
               parsedConfig.route.final = 'direct';
             } else {
+              parsedConfig.route.rules = [...systemServiceRules, ...splitRouteRules, ...initialProfileRules];
               parsedConfig.route.final = primaryProxyTag;
             }
 
@@ -622,12 +621,12 @@ export const useAppStore = create<AppState>()(
                 server: "dns-direct"
               });
 
-              const initialDnsRules = parsedConfig.dns.rules || [];
-              parsedConfig.dns.rules = [...serviceDnsRules, ...splitDnsRules, ...initialDnsRules];
-
               if (isWhitelistActive) {
+                parsedConfig.dns.rules = [...serviceDnsRules, ...splitDnsRules];
                 parsedConfig.dns.final = "dns-direct";
               } else {
+                const initialDnsRules = parsedConfig.dns.rules || [];
+                parsedConfig.dns.rules = [...serviceDnsRules, ...splitDnsRules, ...initialDnsRules];
                 parsedConfig.dns.final = "dns-remote";
               }
             }

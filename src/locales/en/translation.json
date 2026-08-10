@@ -42,6 +42,7 @@
     "vpnModeLabel": "Connection Mode",
     "splitTunneling": "Split tunneling",
     "splitTunnelingDesc": "Choose sites and apps that route through VPN or directly.",
+    "splitTunnelingProxyDesc": "Split tunneling is unavailable in proxy mode because applications cannot be controlled.",
     "change": "Change",
     "apps": "Apps",
     "domains": "Domains",
