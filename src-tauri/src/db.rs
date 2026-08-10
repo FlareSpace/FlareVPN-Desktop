@@ -113,6 +113,7 @@ impl Default for AppSettings {
 
 #[cfg(target_os = "windows")]
 fn get_real_hwid_or_generate() -> String {
+    use std::process::Command;
     use std::os::windows::process::CommandExt;
     let mut cmd = Command::new("reg");
     cmd.creation_flags(0x08000000);
