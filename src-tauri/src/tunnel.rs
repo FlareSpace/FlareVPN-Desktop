@@ -84,19 +84,19 @@ async fn cleanup_stale_tun_bindings() {
 }
 
 async fn stop_child_process_gracefully(child: CommandChild) {
+    let pid = child.pid();
+    let check_interval = tokio::time::Duration::from_millis(50);
+    let max_wait = tokio::time::Duration::from_millis(3000);
+    let start = tokio::time::Instant::now();
+
     #[cfg(target_os = "windows")]
     {
-        let pid = child.pid();
         const CREATE_NO_WINDOW: u32 = 0x08000000;
 
         let mut soft_kill = tokio::process::Command::new("taskkill");
         soft_kill.creation_flags(CREATE_NO_WINDOW);
         soft_kill.args(["/PID", &pid.to_string()]);
         let _ = soft_kill.output().await;
-
-        let check_interval = tokio::time::Duration::from_millis(50);
-        let max_wait = tokio::time::Duration::from_millis(400);
-        let start = tokio::time::Instant::now();
 
         while start.elapsed() < max_wait {
             let mut query = tokio::process::Command::new("tasklist");
@@ -115,9 +115,41 @@ async fn stop_child_process_gracefully(child: CommandChild) {
         hard_kill.creation_flags(CREATE_NO_WINDOW);
         hard_kill.args(["/F", "/PID", &pid.to_string()]);
         let _ = hard_kill.output().await;
+        let _ = child.kill();
     }
 
-    let _ = child.kill();
+    #[cfg(not(target_os = "windows"))]
+    {
+
+        let _ = tokio::process::Command::new("kill")
+            .args(["-2", &pid.to_string()])
+            .output()
+            .await;
+
+        let proc_path = format!("/proc/{}", pid);
+        let proc_path_buf = std::path::PathBuf::from(&proc_path);
+
+        while start.elapsed() < max_wait {
+            if !proc_path_buf.exists() {
+                return;
+            }
+
+            if let Ok(out) = tokio::process::Command::new("kill")
+                .args(["-0", &pid.to_string()])
+                .output()
+                .await 
+            {
+                if !out.status.success() {
+                    return;
+                }
+            }
+
+            tokio::time::sleep(check_interval).await;
+        }
+
+
+        let _ = child.kill();
+    }
 }
 
 #[cfg(target_os = "linux")]
