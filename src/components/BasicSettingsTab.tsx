@@ -9,7 +9,10 @@ import { CloseFilled } from './icons';
 
 interface ProcessItem {
   name: string;
+  display_name?: string;
   path?: string;
+  icon?: string;
+  is_running?: boolean;
 }
 
 function AnimatedModalTitle({ text }: { text: string }) {
@@ -222,10 +225,12 @@ export default function BasicSettingsTab() {
     }
   };
 
-  const filteredProcesses = runningProcesses.filter(proc =>
-    proc.name.toLowerCase().includes(processSearch.toLowerCase()) ||
-    (proc.path && proc.path.toLowerCase().includes(processSearch.toLowerCase()))
-  );
+  const filteredProcesses = runningProcesses.filter(proc => {
+    if (!processSearch.trim()) return true;
+    const terms = processSearch.toLowerCase().trim().split(/\s+/);
+    const target = `${proc.display_name || ''} ${proc.name} ${proc.path || ''}`.toLowerCase();
+    return terms.every(term => target.includes(term));
+  });
 
   return (
     <div className="basic-tab">
@@ -380,29 +385,60 @@ export default function BasicSettingsTab() {
                             </div>
                           ) : (
                             filteredProcesses.map((proc) => {
-                              const isAdded = localApps.some(a => a.toLowerCase() === proc.name.toLowerCase());
+                              const isAdded = localApps.some(a => {
+                                const aLower = a.toLowerCase();
+                                return aLower === proc.name.toLowerCase() || 
+                                       (proc.path && aLower === proc.path.toLowerCase()) ||
+                                       (proc.display_name && aLower === proc.display_name.toLowerCase());
+                              });
+                              const displayName = proc.display_name || proc.name;
+                              const showBinaryTag = proc.display_name && proc.display_name.toLowerCase() !== proc.name.toLowerCase();
+                              const rowKey = `${proc.name}-${proc.path || ''}`;
+
                               return (
                                 <div
-                                  key={proc.name}
+                                  key={rowKey}
                                   className={`process-row ${isAdded ? 'added' : ''}`}
                                   onClick={() => {
                                     if (isAdded) {
-                                      handleRemoveApp(proc.name);
+                                      setLocalApps(localApps.filter(a => {
+                                        const aLower = a.toLowerCase();
+                                        return aLower !== proc.name.toLowerCase() &&
+                                               (!proc.path || aLower !== proc.path.toLowerCase()) &&
+                                               (!proc.display_name || aLower !== proc.display_name.toLowerCase());
+                                      }));
                                     } else {
                                       setLocalApps([...localApps, proc.name]);
                                     }
                                   }}
                                 >
                                   <div className="process-info">
-                                    <AppWindow size={16} className="process-icon" />
-                                    <span className="process-name">{proc.name}</span>
+                                    <AppWindow size={18} className="process-icon" />
+                                    <div className="process-text-group">
+                                      <div className="process-title-row">
+                                        <span className="process-name" title={displayName}>{displayName}</span>
+                                        {showBinaryTag && (
+                                          <span className="process-binary-tag">{proc.name}</span>
+                                        )}
+                                        {proc.is_running && (
+                                          <span className="process-running-badge" title={t('basicTab.running')}>
+                                            <span className="running-dot"></span>
+                                          </span>
+                                        )}
+                                      </div>
+                                      {proc.path && (
+                                        <span className="process-path" title={proc.path}>
+                                          {proc.path}
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
                                   {isAdded ? (
                                     <span className="process-added-tag">
                                       <Check size={14} /> {t('basicTab.alreadyAdded')}
                                     </span>
                                   ) : (
-                                    <button className="process-add-action">
+                                    <button className="process-add-action" type="button">
                                       <Plus size={16} />
                                     </button>
                                   )}

@@ -28,6 +28,12 @@ export default function AdvancedSettingsTab() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (settings.tls_spoof_enabled) {
+      updateSetting('tls_spoof_enabled', false);
+    }
+  }, [settings.tls_spoof_enabled, updateSetting]);
+
   const toggleDropdown = (name: string) => {
     setOpenDropdown(prev => (prev === name ? null : name));
   };
@@ -121,8 +127,10 @@ export default function AdvancedSettingsTab() {
                     <input
                       type="number"
                       className="number-input-styled"
+                      min={10}
+                      max={3600}
                       value={settings.fragmentation_timeout ?? 300}
-                      onChange={(e) => updateSetting('fragmentation_timeout', parseInt(e.target.value) || 0)}
+                      onChange={(e) => updateSetting('fragmentation_timeout', parseInt(e.target.value) || 300)}
                     />
                   </div>
                 </div>
@@ -247,70 +255,18 @@ export default function AdvancedSettingsTab() {
 
         <div className="settings-section">
           <h2 className="section-title">{t('advancedTab.tlsSpoofTitle')}</h2>
-          <div className="settings-card">
-            <div className="setting-row">
+          <div className="settings-card disabled">
+            <div className="setting-row disabled">
               <span className="setting-label">{t('advancedTab.tlsSpoof')}</span>
               <label className="switch">
                 <input
                   type="checkbox"
-                  checked={settings.tls_spoof_enabled || false}
-                  onChange={(e) => updateSetting('tls_spoof_enabled', e.target.checked)}
+                  checked={false}
+                  disabled={true}
+                  onChange={() => {}}
                 />
                 <span className="slider round"></span>
               </label>
-            </div>
-
-            <div className={`card-collapsible ${settings.tls_spoof_enabled ? 'expanded' : ''}`}>
-              <div className="card-collapsible-inner">
-                <div className="card-expanded-content">
-                  <div className="setting-divider"></div>
-
-                  <div className="setting-row">
-                    <span className="setting-label-sub">{t('advancedTab.domain')}</span>
-                    <input
-                      type="text"
-                      className="text-input-styled"
-                      value={settings.tls_spoof_domain || ''}
-                      onChange={(e) => updateSetting('tls_spoof_domain', e.target.value)}
-                      placeholder="google.com"
-                    />
-                  </div>
-
-                  <div className="setting-divider"></div>
-
-                  <div className="setting-row">
-                    <span className="setting-label-sub">{t('advancedTab.method')}</span>
-                    <div className="custom-dropdown-container">
-                      <button
-                        type="button"
-                        className="dropdown-trigger-btn"
-                        onClick={() => toggleDropdown('tls_spoof_method')}
-                      >
-                        <span>{settings.tls_spoof_method || 'wrong-ack'}</span>
-                        <ChevronRight className={`dropdown-arrow ${openDropdown === 'tls_spoof_method' ? 'open' : ''}`} size={16} />
-                      </button>
-
-                      {openDropdown === 'tls_spoof_method' && (
-                        <div className="context-menu">
-                          {['wrong-ack', 'wrong-md5', 'wrong-timestamp'].map((method) => (
-                            <div
-                              key={method}
-                              className={`context-menu-item ${settings.tls_spoof_method === method ? 'active' : ''}`}
-                              onClick={() => {
-                                updateSetting('tls_spoof_method', method);
-                                setOpenDropdown(null);
-                              }}
-                            >
-                              <span>{method}</span>
-                              {settings.tls_spoof_method === method && <Check size={16} />}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
           <p className="section-description">{t('advancedTab.tlsSpoofDesc')}</p>

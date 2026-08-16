@@ -865,6 +865,10 @@ export const useAppStore = create<AppState>()(
         try {
           await get().loadSubscriptions();
           const settings: AppSettings = await invoke('get_app_settings');
+          if (settings.tls_spoof_enabled) {
+            settings.tls_spoof_enabled = false;
+            invoke('update_app_settings', { settings: { ...settings, tls_spoof_enabled: false } }).catch(() => {});
+          }
           set({ settings });
           if (settings.selected_profile_id) {
             set({ selectedProfileId: settings.selected_profile_id });
@@ -879,6 +883,9 @@ export const useAppStore = create<AppState>()(
         }
       },
       updateSetting: async (key, value) => {
+        if (key === 'tls_spoof_enabled') {
+          value = false as any;
+        }
         let changed = false;
         let newSettings!: AppSettings;
         set((state) => {

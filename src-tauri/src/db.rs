@@ -480,7 +480,7 @@ impl DbState {
                         "mux_protocol" => settings.mux_protocol = value,
                         "mux_concurrency" => settings.mux_concurrency = value.parse().unwrap_or(4),
                         "mux_padding" => settings.mux_padding = value == "true",
-                        "tls_spoof_enabled" => settings.tls_spoof_enabled = value == "true",
+                        "tls_spoof_enabled" => settings.tls_spoof_enabled = false,
                         "tls_spoof_domain" => settings.tls_spoof_domain = value,
                         "tls_spoof_method" => settings.tls_spoof_method = value,
                         "tls_fingerprint" => settings.tls_fingerprint = value,
@@ -503,6 +503,9 @@ impl DbState {
         
         if !has_any {
             self.save_settings(&settings)?;
+        } else {
+            let conn = self.conn.lock().unwrap();
+            let _ = conn.execute("UPDATE settings SET value = 'false' WHERE key = 'tls_spoof_enabled'", []);
         }
         
         Ok(settings)

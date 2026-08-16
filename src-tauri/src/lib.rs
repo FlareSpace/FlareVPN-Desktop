@@ -1,99 +1,23 @@
 pub mod db;
 pub mod parser;
 pub mod ping;
+pub mod process;
 pub mod sys_proxy;
 pub mod tunnel;
 
 use db::{DbState, Profile, AppSettings};
 use parser::clipboard::{parse_clipboard_data, SubscriptionParseResult};
-use sysinfo::{System, ProcessesToUpdate};
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{TrayIconBuilder, TrayIconEvent, MouseButton, MouseButtonState},
     Manager, WindowEvent, State, Emitter,
 };
 
-#[derive(serde::Serialize)]
-pub struct ProcessItem {
-    pub name: String,
-    pub path: Option<String>,
-}
-
-const IGNORED_SYSTEM_PROCESSES: &[&str] = &[
-    "system",
-    "system idle process",
-    "registry",
-    "memory compression",
-    "smss.exe",
-    "csrss.exe",
-    "wininit.exe",
-    "services.exe",
-    "lsass.exe",
-    "svchost.exe",
-    "fontdrvhost.exe",
-    "sihost.exe",
-    "dwm.exe",
-    "taskhostw.exe",
-    "conhost.exe",
-    "searchindexer.exe",
-    "searchhost.exe",
-    "runtimebroker.exe",
-    "ctfmon.exe",
-    "wlanext.exe",
-    "spoolsv.exe",
-    "audiodg.exe",
-    "dllhost.exe",
-    "compattelrunner.exe",
-    "smartscreen.exe",
-    "securityhealthservice.exe",
-    "securityhealthhost.exe",
-    "adjustservice.exe",
-    "aggregatorhost.exe",
-    "wmiprvse.exe",
-    "shellexperiencehost.exe",
-    "startmenuexperiencehost.exe",
-    "textinputhost.exe",
-    "applicationframehost.exe",
-    "usermodefontdriver.exe",
-    "dashost.exe",
-];
-
 #[tauri::command]
-async fn get_active_processes() -> Result<Vec<ProcessItem>, String> {
-    tokio::task::spawn_blocking(|| {
-        let mut sys = System::new_all();
-        sys.refresh_processes(ProcessesToUpdate::All, true);
-
-        let mut processes_map = std::collections::BTreeMap::new();
-
-        for (_pid, process) in sys.processes() {
-            let name = process.name().to_string_lossy().to_string();
-            if name.is_empty() {
-                continue;
-            }
-
-            let path_str = process.exe().map(|p| p.to_string_lossy().to_string());
-            let key = name.to_lowercase();
-
-            if key.starts_with('[') || key.ends_with(']') || IGNORED_SYSTEM_PROCESSES.contains(&key.as_str()) {
-                continue;
-            }
-
-            if !processes_map.contains_key(&key) {
-                processes_map.insert(key, ProcessItem {
-                    name,
-                    path: path_str,
-                });
-            }
-        }
-
-
-        let mut list: Vec<ProcessItem> = processes_map.into_values().collect();
-        list.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
-        list
-    })
-    .await
-    .map_err(|e| e.to_string())
+async fn get_active_processes() -> Result<Vec<process::ProcessItem>, String> {
+    tokio::task::spawn_blocking(process::get_active_processes)
+        .await
+        .map_err(|e| e.to_string())
 }
 
 
